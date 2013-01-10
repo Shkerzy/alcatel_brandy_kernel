@@ -23,7 +23,9 @@
 #include <linux/init.h>
 #include <linux/nmi.h>
 #include <linux/dmi.h>
-
+//{Blue screen on panic, xuxian 20110217
+#include <mach/msm_fb.h>
+//}
 int panic_on_oops;
 static unsigned long tainted_mask;
 static int pause_on_oops;
@@ -69,6 +71,13 @@ static void panic_blink_one_second(void)
 	}
 }
 
+//{Blue screen on panic, xuxian 20110217
+char dump_start;
+char dump_buffer[4096];
+int dump_buffer_length = 0;
+extern void put_dmesg_history( char *history );
+//}
+
 /**
  *	panic - halt the system
  *	@fmt: The text string to print
@@ -82,7 +91,10 @@ NORET_TYPE void panic(const char * fmt, ...)
 	static char buf[1024];
 	va_list args;
 	long i;
-
+	
+//{Blue screen on panic, xuxian 20110217
+        dump_start =1;
+//}
 	/*
 	 * It's possible to come here directly from a panic-assertion and
 	 * not have preempt disabled. Some functions called from here want
@@ -99,7 +111,10 @@ NORET_TYPE void panic(const char * fmt, ...)
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	dump_stack();
 #endif
-
+//{Blue screen on panic, xuxian 20110217
+	//lcd_dump();
+	put_dmesg_history( dump_buffer );
+//}
 	/*
 	 * If we have crashed and we have a crash kernel loaded let it handle
 	 * everything else.

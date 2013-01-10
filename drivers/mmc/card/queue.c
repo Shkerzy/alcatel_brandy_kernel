@@ -24,6 +24,9 @@
 
 #define MMC_QUEUE_SUSPENDED	(1 << 0)
 
+//add by GeNan
+static atomic_t __mmc_queue_suspend;
+
 /*
  * Prepare a MMC request. This just filters out odd stuff.
  */
@@ -100,6 +103,14 @@ static int mmc_queue_thread(void *d)
 #else
 			mq->issue_fn(mq, req);
 #endif
+		//add by GeNan
+		if (atomic_read(&__mmc_queue_suspend)) {
+			printk("XXX mmc_queue_thread mutex up and schedule when suspend...\n");
+			up(&mq->thread_sem);
+			schedule();
+			down(&mq->thread_sem);
+		}
+
 	} while (1);
 	up(&mq->thread_sem);
 
@@ -297,6 +308,9 @@ void mmc_queue_suspend(struct mmc_queue *mq)
 		blk_stop_queue(q);
 		spin_unlock_irqrestore(q->queue_lock, flags);
 
+		//add by GeNan
+		atomic_set(&__mmc_queue_suspend, 1);
+
 		down(&mq->thread_sem);
 	}
 }
@@ -312,6 +326,8 @@ void mmc_queue_resume(struct mmc_queue *mq)
 
 	if (mq->flags & MMC_QUEUE_SUSPENDED) {
 		mq->flags &= ~MMC_QUEUE_SUSPENDED;
+		//add by GeNan
+		atomic_set(&__mmc_queue_suspend, 0);
 
 		up(&mq->thread_sem);
 

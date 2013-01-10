@@ -27,6 +27,18 @@ struct msm_serial_hs_platform_data {
 	int (*gpio_config)(int);
 };
 
+//yangyufeng for bluesleep
+#define UART_BLUESLEEP_OPEN 1
+#define UART_BLUESLEEP_CLOSE 2
+#define UART_BLUESLEEP_IOCTL 3
+#define UART_BLUESLEEP_WRITE 4
+#define UART_BLUESLEEP_READ 5
+struct uart_bluesleep_op
+{
+	int (*bluesleep_event)(struct uart_port *uport,unsigned long event,unsigned int cmd, unsigned long arg);
+};
+void msm_hs_register_bluesleep(struct uart_bluesleep_op *ops);
+
 unsigned int msm_hs_tx_empty(struct uart_port *uport);
 void msm_hs_request_clock_off(struct uart_port *uport);
 void msm_hs_request_clock_on(struct uart_port *uport);

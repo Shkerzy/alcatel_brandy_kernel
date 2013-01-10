@@ -240,6 +240,8 @@ void mmc_wait_for_req(struct mmc_host *host, struct mmc_request *mrq)
 	mrq->done = mmc_wait_done;
 
 	mmc_start_request(host, mrq);
+	if(host->index == 0)
+		mmc_delay(10);
 
 	wait_for_completion_io(&complete);
 }
@@ -887,8 +889,8 @@ u32 mmc_select_voltage(struct mmc_host *host, u32 ocr)
 		host->ios.vdd = bit;
 		mmc_set_ios(host);
 	} else {
-		pr_warning("%s: host doesn't support card's voltages\n",
-				mmc_hostname(host));
+		pr_warning("%s: host doesn't support card's voltages, ocr %d, host->ocr_avail %d\n",
+				mmc_hostname(host), ocr, host->ocr_avail);
 		ocr = 0;
 	}
 
@@ -1129,6 +1131,7 @@ void mmc_rescan(struct work_struct *work)
 	}
 	spin_unlock_irqrestore(&host->lock, flags);
 
+	printk("%s %s %d=====================\n", __FILE__, __func__, __LINE__);
 	mmc_bus_get(host);
 
 	/*
@@ -1459,6 +1462,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		}
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
+		if(!host->card || host->card->type != MMC_TYPE_SDIO)
 		mmc_detect_change(host, 0);
 	}
 

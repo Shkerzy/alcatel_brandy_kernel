@@ -482,7 +482,8 @@ struct msm_snapshot_pp_status {
 #define CFG_GET_AF_MAX_STEPS		26
 #define CFG_GET_PICT_MAX_EXP_LC		27
 #define CFG_SEND_WB_INFO    28
-#define CFG_MAX 			29
+#define CFG_SET_NIGHTMODE 29
+#define CFG_MAX 30
 
 #define MOVE_NEAR	0
 #define MOVE_FAR	1
@@ -553,6 +554,7 @@ struct sensor_cfg_data {
 		struct focus_cfg focus;
 		struct fps_cfg fps;
 		struct wb_info_cfg wb_info;
+		int value;
 	} cfg;
 };
 
@@ -600,4 +602,77 @@ struct msm_camsensor_info {
 	uint8_t flash_enabled;
 	int8_t total_steps;
 };
+/******************************************/
+
+/* Brightness type, used for CAMERA_PARM_BRIGHTNESS */
+typedef enum
+{
+    CAMERA_BRIGHTNESS_MIN = 0,
+    CAMERA_BRIGHTNESS_0 = 0,
+    CAMERA_BRIGHTNESS_1 = 1,
+    CAMERA_BRIGHTNESS_2 = 2,
+    CAMERA_BRIGHTNESS_3 = 3,
+    CAMERA_BRIGHTNESS_4 = 4,
+    CAMERA_BRIGHTNESS_5 = 5,
+    CAMERA_BRIGHTNESS_DEFAULT = 5,
+    CAMERA_BRIGHTNESS_6 = 6,
+    CAMERA_BRIGHTNESS_7 = 7,
+    CAMERA_BRIGHTNESS_8 = 8,
+    CAMERA_BRIGHTNESS_9 = 9,
+    CAMERA_BRIGHTNESS_10 = 10,
+    CAMERA_BRIGHTNESS_MAX = 10
+} camera_brightness_type;
+
+typedef enum
+{
+    CAMERA_ANTIBANDING_OFF,
+    CAMERA_ANTIBANDING_60HZ,
+    CAMERA_ANTIBANDING_50HZ,
+    CAMERA_ANTIBANDING_AUTO,
+    CAMERA_MAX_ANTIBANDING,
+} camera_antibanding_type;
+
+/* White balancing type, used for CAMERA_PARM_WHITE_BALANCING */
+typedef enum
+{
+    CAMERA_WB_MIN_MINUS_1,
+    CAMERA_WB_AUTO = 1,  /* This list must match aeecamera.h */
+    CAMERA_WB_CUSTOM,
+    CAMERA_WB_INCANDESCENT,
+    CAMERA_WB_FLUORESCENT,
+    CAMERA_WB_DAYLIGHT,
+    CAMERA_WB_CLOUDY_DAYLIGHT,
+    CAMERA_WB_TWILIGHT,
+    CAMERA_WB_SHADE,
+    CAMERA_WB_MAX_PLUS_1
+} camera_wb_type;
+
+typedef enum
+{
+  CAMERA_NIGHTSHOT_MODE_OFF,
+  CAMERA_NIGHTSHOT_MODE_ON,
+  CAMERA_MAX_NIGHTSHOT_MODE
+} camera_nightshot_mode_type;
+
+/* Effect type, used for CAMERA_PARM_EFFECT */
+#if 0
+typedef enum
+{
+    CAMERA_EFFECT_MIN_MINUS_1,
+    CAMERA_EFFECT_OFF = 1,  /* This list must match aeecamera.h */
+    CAMERA_EFFECT_MONO,
+    CAMERA_EFFECT_NEGATIVE,
+    CAMERA_EFFECT_SOLARIZE,
+    CAMERA_EFFECT_PASTEL,
+    CAMERA_EFFECT_MOSAIC,
+    CAMERA_EFFECT_RESIZE,
+    CAMERA_EFFECT_SEPIA,
+    CAMERA_EFFECT_POSTERIZE,
+    CAMERA_EFFECT_WHITEBOARD,
+    CAMERA_EFFECT_BLACKBOARD,
+    CAMERA_EFFECT_AQUA,
+    CAMERA_EFFECT_MAX_PLUS_1
+} camera_effect_type;
+#endif
+
 #endif /* __LINUX_MSM_CAMERA_H */

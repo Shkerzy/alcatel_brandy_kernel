@@ -43,13 +43,25 @@
 static void otg_reset(struct otg_transceiver *xceiv, int phy_reset);
 static void msm_otg_set_vbus_state(int online);
 static void msm_otg_set_id_state(int online);
+extern int jrd_get_usb_connect(void);
+
+/* work function */
+static void jrd_vbus_work(struct work_struct *work);
+
+/* work queue */
+DECLARE_DELAYED_WORK(jrd_vbus_workqueue, jrd_vbus_work);
+
+static void jrd_vbus_work(struct work_struct *work)
+{
+    jrd_get_usb_connect();
+}
 
 struct msm_otg *the_msm_otg;
 
 static int is_host(void)
 {
 	struct msm_otg *dev = the_msm_otg;
-
+        return 0;
 	if (dev->pmic_id_notif_supp)
 		return dev->pmic_id_status ? 0 : 1;
 	else if (dev->pdata->otg_mode == OTG_ID)
@@ -1173,7 +1185,10 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 		 */
 		if ((state >= OTG_STATE_A_IDLE) &&
 			!test_bit(ID_A, &dev->inputs))
+                {
+                        schedule_delayed_work(&jrd_vbus_workqueue, 0);
 			goto out;
+                }
 		if (otgsc & OTGSC_BSV) {
 			pr_debug("BSV set\n");
 			set_bit(B_SESS_VLD, &dev->inputs);
@@ -1182,6 +1197,7 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 			clear_bit(B_SESS_VLD, &dev->inputs);
 		}
 		work = 1;
+                schedule_delayed_work(&jrd_vbus_workqueue, 0);
 	} else if (otgsc & OTGSC_DPIS) {
 		pr_debug("DPIS detected\n");
 		writel(otgsc, USB_OTGSC);
@@ -1696,8 +1712,10 @@ static void msm_otg_sm_work(struct work_struct *w)
 #ifdef CONFIG_USB_MSM_ACA
 			del_timer_sync(&dev->id_timer);
 #endif
+		#if 0	/*delete for detect usb and wall charger*/
 			/* Workaround: Reset PHY in SE1 state */
 			otg_reset(&dev->otg, 1);
+		#endif
 			pr_debug("entering into lpm with wall-charger\n");
 			msm_otg_put_suspend(dev);
 			/* Allow idle power collapse */

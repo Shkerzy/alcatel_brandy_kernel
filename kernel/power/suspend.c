@@ -18,12 +18,14 @@
 #include <linux/gfp.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/rtc.h>
 #include <linux/list.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
 
 #include "power.h"
+#include "../../arch/arm/mach-msm/proc_comm.h"
 
 const char *const pm_states[PM_SUSPEND_MAX] = {
 #ifdef CONFIG_EARLYSUSPEND
@@ -200,6 +202,10 @@ int suspend_devices_and_enter(suspend_state_t state)
 {
 	int error;
 	gfp_t saved_mask;
+#if JRD_RECORD_SLEEP_UP_TIME
+        struct timespec a_ts;
+	struct rtc_time a_tm;
+#endif
 
 	if (!suspend_ops)
 		return -ENOSYS;
@@ -209,6 +215,18 @@ int suspend_devices_and_enter(suspend_state_t state)
 		if (error)
 			goto Close;
 	}
+
+#if JRD_RECORD_SLEEP_UP_TIME
+       getnstimeofday(&a_ts);
+
+       rtc_time_to_tm(a_ts.tv_sec, &a_tm);
+       //printk(KERN_ERR "++++++@@@@=====: at %lld "
+       //       "(%d-%02d-b_min:%02d b_sec:%02d a_min:%02d a_sec:%02d.%09lu UTC)\n",
+       //       ktime_to_ns(ktime_get()),
+       //	a_tm.tm_year + 1900, a_tm.tm_mon + 1, a_tm.tm_mday,
+       //       a_tm.tm_hour, a_tm.tm_min, a_tm.tm_sec, a_ts.tv_nsec);
+#endif
+
 	suspend_console();
 	saved_mask = clear_gfp_allowed_mask(GFP_IOFS);
 	suspend_test_start();

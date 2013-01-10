@@ -500,6 +500,8 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		max_dtr = card->csd.max_dtr;
 	}
 
+	// add by GeNan, sd clk speed to 16M
+	max_dtr = 16000000;
 	mmc_set_clock(host, max_dtr);
 
 	/*

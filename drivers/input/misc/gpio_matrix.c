@@ -20,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/wakelock.h>
+#include <mach/gpio.h>
 
 struct gpio_kp {
 	struct gpio_event_input_devs *input_devs;
@@ -34,6 +35,9 @@ struct gpio_kp {
 	unsigned int disabled_irq:1;
 	unsigned long keys_pressed[0];
 };
+/*add by stephen.huang*/
+unsigned char SideKeypressed=0;
+/*end add*/
 
 static void clear_phantom_key(struct gpio_kp *kp, int out, int in)
 {
@@ -115,20 +119,33 @@ static void report_key(struct gpio_kp *kp, int key_index, int out, int in)
 	if (pressed != test_bit(keycode, kp->input_devs->dev[dev]->key)) {
 		if (keycode == KEY_RESERVED) {
 			if (mi->flags & GPIOKPF_PRINT_UNMAPPED_KEYS)
-				pr_info("gpiomatrix: unmapped key, %d-%d "
+				printk("gpiomatrix: unmapped key, %d-%d "
 					"(%d-%d) changed to %d\n",
 					out, in, mi->output_gpios[out],
 					mi->input_gpios[in], pressed);
 		} else {
-			if (mi->flags & GPIOKPF_PRINT_MAPPED_KEYS)
-				pr_info("gpiomatrix: key %x, %d-%d (%d-%d) "
+			//if (mi->flags & GPIOKPF_PRINT_MAPPED_KEYS)
+				printk("gpiomatrix: key %x, %d-%d (%d-%d) "
 					"changed to %d\n", keycode,
 					out, in, mi->output_gpios[out],
 					mi->input_gpios[in], pressed);
 			input_report_key(kp->input_devs->dev[dev], keycode, pressed);
+			/*add by stephen.huang*/
+                        if(((0x13 == keycode)||(0x14 == keycode))&&(pressed)){
+				SideKeypressed = 1;
+                        }
+			/*end add*/
 		}
 	}
 }
+
+/*add by stephen.huang*/
+unsigned char isSideKeypressed(void)
+{
+	return SideKeypressed;
+}
+EXPORT_SYMBOL(isSideKeypressed);
+/*end add*/
 
 static enum hrtimer_restart gpio_keypad_timer_func(struct hrtimer *timer)
 {

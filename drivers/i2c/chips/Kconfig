@@ -13,4 +13,16 @@ config SENSORS_MT9T013
 	help
 	 MT9T013 Camera Driver implemented by HTC.
 
+config SENSORS_TAOS
+	tristate "TMD2771x DIGITAL ALS + PROXIMITY DETECTOR"
+	depends on I2C_GPIO
+	help
+		TAOS TMD2771x digital ALS and proximity detector device driver
+
+config SENSORS_AKM8975
+	tristate "AKM8975 Compass Driver"
+	depends on I2C_GPIO
+	help
+	 AKM8975 Compass Driver implemented by ALCATEL.
+
 endmenu

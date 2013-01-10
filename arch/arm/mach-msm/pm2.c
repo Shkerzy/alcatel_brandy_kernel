@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/pm.h>
+#include <linux/rtc.h>
 #include <linux/pm_qos_params.h>
 #include <linux/proc_fs.h>
 #include <linux/suspend.h>
@@ -967,6 +968,9 @@ static int msm_pm_modem_busy(void)
  *      -ETIMEDOUT: timed out waiting for modem's handshake -- no power loss
  *      0: success
  */
+ #if JRD_RECORD_SLEEP_UP_TIME
+signed long long jrd_total_sleep_time = 0;
+ #endif
 static int msm_pm_power_collapse
 	(bool from_idle, uint32_t sleep_delay, uint32_t sleep_limit)
 {
@@ -1373,7 +1377,12 @@ static int msm_pm_swfi(bool ramp_acpu)
 /******************************************************************************
  * External Idle/Suspend Functions
  *****************************************************************************/
+ #if JRD_RECORD_SLEEP_UP_TIME
+signed long long jrd_b_time = 0, jrd_a_time = 0;
+extern bool jrd_start_pwd_record;
 
+struct timespec jrd_b_ts;
+#endif
 /*
  * Put CPU in low power mode.
  */
@@ -1395,6 +1404,11 @@ void arch_idle(void)
 	static int64_t t2;
 	int exit_stat;
 #endif /* CONFIG_MSM_IDLE_STATS */
+
+#if JRD_RECORD_SLEEP_UP_TIME
+        struct timespec a_ts;//,b_ts;
+	struct rtc_time a_tm;
+#endif
 
 	if (!atomic_read(&msm_pm_init_done))
 		return;
@@ -1513,6 +1527,23 @@ void arch_idle(void)
 		sleep_limit |= SLEEP_RESOURCE_MEMORY_BIT1;
 #elif defined(CONFIG_MSM_MEMORY_LOW_POWER_MODE_IDLE_RETENTION)
 		sleep_limit |= SLEEP_RESOURCE_MEMORY_BIT0;
+#endif
+
+#if JRD_RECORD_SLEEP_UP_TIME
+                if (jrd_start_pwd_record == true)
+                {
+
+                getnstimeofday(&a_ts);
+                rtc_time_to_tm(a_ts.tv_sec, &a_tm);
+
+                jrd_b_ts = a_ts;
+
+                //printk(KERN_ERR "sleep time:==: at %lld "
+		//	"(%d-%02d-b_min:%02d b_sec:%02d a_min:%02d a_sec:%02d.%09lu UTC)\n",
+		//	ktime_to_ns(ktime_get()),
+		//	a_tm.tm_year + 1900, a_tm.tm_mon + 1, a_tm.tm_mday,
+		//	a_tm.tm_hour, a_tm.tm_min, a_tm.tm_sec, a_ts.tv_nsec);
+                }
 #endif
 
 		ret = msm_pm_power_collapse(true, sleep_delay, sleep_limit);

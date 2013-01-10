@@ -170,6 +170,7 @@ static struct msm_hs_port q_uart_port[UARTDM_NR];
 static struct platform_driver msm_serial_hs_platform_driver;
 static struct uart_driver msm_hs_driver;
 static struct uart_ops msm_hs_ops;
+static struct uart_bluesleep_op *bluesleep_ops=NULL;//yangyufeng for bluesleep
 
 #define UARTDM_TO_MSM(uart_port) \
 	container_of((uart_port), struct msm_hs_port, uport)
@@ -1004,13 +1005,20 @@ out:
 	/* tty_flip_buffer_push() might call msm_hs_start(), so unlock */
 	spin_unlock_irqrestore(&uport->lock, flags);
 	if (flush < FLUSH_DATA_INVALID)
+	{
 		tty_flip_buffer_push(tty);
+		if (bluesleep_ops && bluesleep_ops->bluesleep_event)//yangyufeng for bluesleep
+			bluesleep_ops->bluesleep_event(uport,UART_BLUESLEEP_READ,0,0);
+	}
 }
 
 /* Enable the transmitter Interrupt */
 static void msm_hs_start_tx_locked(struct uart_port *uport )
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+
+	if (bluesleep_ops && bluesleep_ops->bluesleep_event)//yangyufeng for bluesleep
+		bluesleep_ops->bluesleep_event(uport,UART_BLUESLEEP_WRITE,0,0);
 
 	clk_enable(msm_uport->clk);
 
@@ -1619,6 +1627,8 @@ static int msm_hs_startup(struct uart_port *uport)
 		dev_err(uport->dev, "set active error:%d\n", ret);
 	pm_runtime_enable(uport->dev);
 
+	if (bluesleep_ops && bluesleep_ops->bluesleep_event)//yangyufeng for bluesleep
+	    bluesleep_ops->bluesleep_event(uport,UART_BLUESLEEP_OPEN,0,0);
 
 	return 0;
 }
@@ -1952,6 +1962,9 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	free_irq(uport->irq, msm_uport);
 	if (use_low_power_wakeup(msm_uport))
 		free_irq(msm_uport->wakeup.irq, msm_uport);
+
+	if (bluesleep_ops && bluesleep_ops->bluesleep_event)//yangyufeng for bluesleep
+	    bluesleep_ops->bluesleep_event(uport,UART_BLUESLEEP_CLOSE,0,0);
 }
 
 static void __exit msm_serial_hs_exit(void)
@@ -2009,6 +2022,13 @@ static struct uart_driver msm_hs_driver = {
 	.nr = UARTDM_NR,
 	.cons = 0,
 };
+
+//yangyufeng for bluesleep
+void msm_hs_register_bluesleep(struct uart_bluesleep_op *ops)
+{
+	bluesleep_ops = ops;
+}
+//end
 
 static struct uart_ops msm_hs_ops = {
 	.tx_empty = msm_hs_tx_empty,

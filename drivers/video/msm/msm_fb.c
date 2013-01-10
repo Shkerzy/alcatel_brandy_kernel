@@ -48,6 +48,8 @@
 #include "mdp.h"
 #include "mdp4.h"
 
+#include "../../../arch/arm/mach-msm/proc_comm.h"
+
 #ifdef CONFIG_FB_MSM_LOGO
 #define INIT_IMAGE_FILE "/initlogo.rle"
 extern int load_565rle_image(char *filename);
@@ -117,6 +119,146 @@ static int msm_fb_mmap(struct fb_info *info, struct vm_area_struct * vma);
 int msm_fb_debugfs_file_index;
 struct dentry *msm_fb_debugfs_root;
 struct dentry *msm_fb_debugfs_file[MSM_FB_MAX_DBGFS];
+
+#if JRD_RECORD_SLEEP_UP_TIME
+
+static unsigned int jrd_lcd_sum= 0;
+static struct timer_list jrd_lcd_timer;
+/** Lock for state transitions */
+static spinlock_t jrd_lcd_lock;
+extern bool jrd_start_pwd_record;
+
+/* work function */
+static void jrd_lcd_work(struct work_struct *work);
+
+/* work queue */
+DECLARE_DELAYED_WORK(jrd_lcd_workqueue, jrd_lcd_work);
+
+void jrd_erase_lcd_file(unsigned int data)
+{
+	char buff[10]={0};
+	char buff_time[50]={0};
+      	mm_segment_t old_fs;
+	loff_t pos;
+	struct file *fp;
+   	struct file *fp_str;
+	u32 up_h, up_m, up_s;
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	fp = filp_open ("/data/lcd_on_time", O_RDWR|O_CREAT , 0666);
+	if (IS_ERR(fp)) {
+		printk("============open file error===================\n");
+return ;
+	}
+
+	fp_str = filp_open ("/data/lcd_on_time.txt", O_RDWR|O_CREAT , 0666);
+	if (IS_ERR(fp_str)) {
+	         printk("============open file error===================\n");
+return ;
+	 }
+
+	sprintf(buff,"%d",data);
+
+	up_h=data;
+	up_m=data;
+	up_s=data;
+
+	sprintf(buff_time,"backlight on time (h:m:s): %d:%02d:%02d  ",up_h,up_m,up_s);
+	printk("backlight on time (h:m:s): %d:%02d:%02d  ",up_h,up_m,up_s);
+
+	pos = 0;
+	vfs_write(fp,buff, sizeof(buff), &pos);
+	pos = 0;
+	vfs_write(fp_str,buff_time, sizeof(buff_time), &pos);
+
+	filp_close(fp_str, NULL);
+	filp_close(fp, NULL);
+	set_fs(old_fs);
+}
+
+void jrd_lcd_write_fs_time(void)
+{
+	char buff[10]={0};
+	char buff_time[50]={0};
+      	mm_segment_t old_fs;
+	loff_t pos;
+	struct file *fp;
+   	struct file *fp_str;
+	u32 up_h, up_m, up_s;
+	unsigned int sum = 0;
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	fp = filp_open ("/data/lcd_on_time", O_RDWR|O_CREAT , 0666);
+	if (IS_ERR(fp)) {
+		printk("============open file error===================\n");
+return;
+	}
+
+	fp_str = filp_open ("/data/lcd_on_time.txt", O_RDWR|O_CREAT , 0666);
+	if (IS_ERR(fp_str)) {
+	         printk("============open file error===================\n");
+return;
+	 }
+	pos =0;
+	vfs_read(fp, buff, sizeof(buff), &pos);
+
+	sscanf(buff,"%d",&sum);
+	//printk("read time is %d\n",sum);
+	sum+= jrd_lcd_sum;
+	jrd_lcd_sum = 0;
+	//printk("total time is %d\n",sum);
+	sprintf(buff,"%d",sum);
+
+	up_h=(u32)sum/3600;
+	up_m=((u32)sum-(up_h*3600))/60;
+	up_s=(u32)sum-(up_h*3600)-(up_m*60);
+
+	sprintf(buff_time,"backlight on time (h:m:s): %d:%02d:%02d  ",up_h,up_m,up_s);
+
+	pos = 0;
+	vfs_write(fp,buff, sizeof(buff), &pos);
+	pos = 0;
+	vfs_write(fp_str,buff_time, sizeof(buff_time), &pos);
+
+	filp_close(fp_str, NULL);
+	filp_close(fp, NULL);
+	set_fs(old_fs);
+}
+
+void jrd_lcd_write_time(unsigned int data, bool be_erased)
+{
+	if(TRUE == be_erased) {
+		jrd_lcd_sum = 0;
+		jrd_erase_lcd_file(0);
+	}
+	if( 1== data) {
+		mod_timer(&jrd_lcd_timer, jiffies+msecs_to_jiffies(1000*60*10));
+	} else {
+		del_timer(&jrd_lcd_timer);
+	}
+}
+
+static void jrd_lcd_work(struct work_struct *work)
+{
+	jrd_lcd_write_fs_time();
+	mod_timer(&jrd_lcd_timer, jiffies+msecs_to_jiffies(1000*60*10));
+}
+
+static void jrd_lcd_timer_function(unsigned long data)
+{
+	unsigned long irq_flags;
+
+	spin_lock_irqsave(&jrd_lcd_lock, irq_flags);
+
+	schedule_delayed_work(&jrd_lcd_workqueue, 0);
+
+	spin_unlock_irqrestore(&jrd_lcd_lock, irq_flags);
+}
+#endif
 
 struct dentry *msm_fb_get_debugfs_root(void)
 {
@@ -351,6 +493,14 @@ static int msm_fb_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 	msm_fb_create_sysfs(pdev);
+
+#if JRD_RECORD_SLEEP_UP_TIME
+	init_timer(&jrd_lcd_timer);
+
+	jrd_lcd_timer.data = 0;
+	jrd_lcd_timer.function = jrd_lcd_timer_function;
+#endif
+
 	return 0;
 }
 
@@ -632,6 +782,50 @@ void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
 {
 	struct msm_fb_panel_data *pdata;
 
+#if JRD_RECORD_SLEEP_UP_TIME
+	static struct timespec start;
+	static struct timespec end;
+	static int call_once=0;
+	static int is_close = FALSE;
+	static int is_first_boot=TRUE;
+//add for calculating the time of lcd backlight on ,  begin
+	if(  TRUE ==jrd_start_pwd_record ) {
+
+		if(bkl_lvl != 0) {
+			is_close = FALSE;
+		}
+
+		if( is_close == FALSE) {
+			if( bkl_lvl != 0) {
+				if(is_close == FALSE ) {
+					if( is_first_boot == FALSE) {
+						if( call_once == 0) {
+							start = current_kernel_time();
+							call_once = 1;
+						}
+					}
+				}
+			} else {
+				if( is_first_boot == TRUE)	{
+					start = current_kernel_time();
+					is_first_boot = FALSE;
+				}
+
+				end = current_kernel_time();
+				is_close = TRUE;
+				call_once = 0;
+
+				jrd_lcd_sum+= (unsigned int)(end.tv_sec - start.tv_sec);
+				printk("total time is %d\n",jrd_lcd_sum);
+				jrd_lcd_write_fs_time();
+				printk("============lcd backlight on time is %ld==============\n",(end.tv_sec - start.tv_sec));
+			}
+		}
+
+	}
+//end
+#endif
+
 	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 
 	if ((pdata) && (pdata->set_backlight)) {
@@ -665,6 +859,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			ret = pdata->on(mfd->pdev);
 			if (ret == 0) {
 				mfd->panel_power_on = TRUE;
+				msm_fb_set_backlight(mfd, mfd->bl_level);
 
 /* ToDo: possible conflict with android which doesn't expect sw refresher */
 /*
@@ -2597,6 +2792,15 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 #endif
 	struct mdp_page_protection fb_page_protection;
 	int ret = 0;
+
+#ifdef CONFIG_FB_MSM_OVERLAY
+        /*always let unset cmd go*/
+        if(cmd != MSMFB_OVERLAY_UNSET)
+#endif
+                if(!mfd->op_enable)
+                {
+                  return -EPERM;
+                }
 
 	switch (cmd) {
 #ifdef CONFIG_FB_MSM_OVERLAY

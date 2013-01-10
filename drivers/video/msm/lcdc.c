@@ -35,6 +35,8 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <mach/msm_reqs.h>
+#include <linux/pm_qos_params.h>
+#include <linux/wakelock.h>
 
 #include "msm_fb.h"
 
@@ -49,6 +51,9 @@ static int pdev_list_cnt;
 
 static struct clk *pixel_mdp_clk; /* drives the lcdc block in mdp */
 static struct clk *pixel_lcdc_clk; /* drives the lcdc interface */
+
+static struct wake_lock lcdc_wake_lock;
+struct pm_qos_request_list *pm_qos_request_plist;
 
 static struct platform_driver lcdc_driver = {
 	.probe = lcdc_probe,
@@ -87,6 +92,10 @@ static int lcdc_off(struct platform_device *pdev)
 	mdp_bus_scale_update_request(0);
 #endif
 
+	wake_unlock(&lcdc_wake_lock);
+	pm_qos_update_request(pm_qos_request_plist ,
+				  PM_QOS_DEFAULT_VALUE);
+
 	return ret;
 }
 
@@ -123,6 +132,10 @@ static int lcdc_on(struct platform_device *pdev)
 		clk_enable(mfd->ebi1_clk);
 	}
 #endif
+
+	wake_lock(&lcdc_wake_lock);
+	pm_qos_update_request(pm_qos_request_plist ,
+				  pm_qos_rate);
 	mfd = platform_get_drvdata(pdev);
 
 	mfd->fbi->var.pixclock = clk_round_rate(pixel_mdp_clk,
@@ -225,6 +238,9 @@ static int lcdc_probe(struct platform_device *pdev)
 	if (IS_ERR(mfd->ebi1_clk))
 		return PTR_ERR(mfd->ebi1_clk);
 #endif
+
+	wake_lock_init(&lcdc_wake_lock, WAKE_LOCK_IDLE, "lcdc");
+
 	/*
 	 * set driver data
 	 */
@@ -241,6 +257,7 @@ static int lcdc_probe(struct platform_device *pdev)
 	return 0;
 
 lcdc_probe_err:
+	wake_lock_destroy(&lcdc_wake_lock);
 	platform_device_put(mdp_dev);
 	return rc;
 }
@@ -254,6 +271,9 @@ static int lcdc_remove(struct platform_device *pdev)
 
 	clk_put(mfd->ebi1_clk);
 #endif
+
+	wake_lock_destroy(&lcdc_wake_lock);
+	pm_qos_remove_request(pm_qos_request_plist);
 	return 0;
 }
 
@@ -289,6 +309,8 @@ static int __init lcdc_driver_init(void)
 		}
 	}
 
+	pm_qos_request_plist = pm_qos_add_request(PM_QOS_SYSTEM_BUS_FREQ ,
+			       PM_QOS_DEFAULT_VALUE);
 	return lcdc_register_driver();
 }
 

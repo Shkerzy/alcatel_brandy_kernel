@@ -39,7 +39,11 @@
 #include <linux/syslog.h>
 
 #include <asm/uaccess.h>
-
+//{Blue screen on panic, xuxian 20110217
+extern char dump_start;
+extern char dump_buffer[320*480+1];
+extern int  dump_buffer_length;
+//}
 /*
  * for_each_console() allows you to iterate on each console
  */
@@ -670,7 +674,10 @@ asmlinkage int printk(const char *fmt, ...)
 {
 	va_list args;
 	int r;
-
+//{Blue screen on panic, xuxian 20110217
+	static char buf[1024];
+	va_list args_1;	
+//}
 #ifdef CONFIG_KGDB_KDB
 	if (unlikely(kdb_trap_printk)) {
 		va_start(args, fmt);
@@ -682,6 +689,16 @@ asmlinkage int printk(const char *fmt, ...)
 	va_start(args, fmt);
 	r = vprintk(fmt, args);
 	va_end(args);
+//{Blue screen on panic, xuxian 20110217
+	if ( dump_start && dump_buffer_length < 4096 ){
+		va_start(args_1, fmt);
+		vsnprintf(buf, sizeof(buf), fmt, args_1);	
+		va_end(args_1);
+
+		sprintf( &dump_buffer[dump_buffer_length], "%s", buf );
+		dump_buffer_length = strlen(dump_buffer);
+	}
+//}
 
 	return r;
 }

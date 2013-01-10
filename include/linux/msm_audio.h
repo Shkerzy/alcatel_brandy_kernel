@@ -350,5 +350,7 @@ struct msm_acdb_cmd_device {
 	uint32_t     *phys_buf;           /* Physical Address of data */
 };
 
+#define MSM_JRD_BATT_IOC_MAGIC 'B'
+#define MSM_JRD_BATT_CHARG_STAUT _IOW(MSM_JRD_BATT_IOC_MAGIC, 0, unsigned *)
 
 #endif

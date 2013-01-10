@@ -46,6 +46,8 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 #include <asm/unistd.h>
+#include "../arch/arm/mach-msm/proc_comm.h"
+
 
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
@@ -337,7 +339,12 @@ void kernel_halt(void)
 }
 
 EXPORT_SYMBOL_GPL(kernel_halt);
-
+#if JRD_RECORD_SLEEP_UP_TIME
+extern bool jrd_start_pwd_record;
+extern signed long long jrd_total_sleep_time;
+extern void sleep_time_fs_write(signed long long sleep_time, bool be_erased);
+extern void jrd_lcd_write_fs_time(void);
+#endif
 /**
  *	kernel_power_off - power_off the system
  *
@@ -345,6 +352,15 @@ EXPORT_SYMBOL_GPL(kernel_halt);
  */
 void kernel_power_off(void)
 {
+#if JRD_RECORD_SLEEP_UP_TIME
+        if (jrd_start_pwd_record == true)
+        {
+	   jrd_lcd_write_fs_time();
+            sleep_time_fs_write(jrd_total_sleep_time, false);
+            jrd_total_sleep_time = 0;
+        }
+#endif
+
 	kernel_shutdown_prepare(SYSTEM_POWER_OFF);
 	if (pm_power_off_prepare)
 		pm_power_off_prepare();

@@ -36,6 +36,37 @@
  35: KYPD_9
  41: KYPD_MEMO
 */
+//by huyugui
+/*****************************************
+ * T&A opal test board keypad define(6*8)
+ *36: KEYINPUT[0]	col
+ *37: KEYINPUT[1]  	col
+ *38: KEYINPUT[2]	col
+ *39: KEYINPUT[3]	col
+ *40: KEYINPUT[4]	col
+ *41: KEYINPUT[5]	col
+ *
+ *
+ *35: KEYOUTPUT[0]	row
+ *34: KEYOUTPUT[1]	row
+ *33: KEYOUTPUT[2]	row
+ *32: KEYOUTPUT[3]	row
+ *31: KEYOUTOUT[4]	row
+ *29: KEYOUTPUT[5]	row
+ *28: KEYOUTPUT[6]	row	
+ *27: KEYOUTPUT[7]	row
+ ****************************************/
+
+static unsigned int keypad_row_opal[] = {35};
+static unsigned int keypad_col_opal[] = {39, 40, 41};
+
+#define KEY_INDEX_OPAL(row, col) ((row)*ARRAY_SIZE(keypad_col_opal) + (col))
+static const unsigned short keypad_keymap_opal[ARRAY_SIZE(keypad_col_opal) *
+					       ARRAY_SIZE(keypad_row_opal)] = {
+	[KEY_INDEX_OPAL(0, 0)] = KEY_VOLUMEUP,
+	[KEY_INDEX_OPAL(0, 1)] = KEY_VOLUMEDOWN,
+	[KEY_INDEX_OPAL(0, 2)] = KEY_HOME,
+};
 
 static unsigned int keypad_row_gpios[] = {
 	31, 32, 33, 34, 35, 41
@@ -245,6 +276,7 @@ struct platform_device keypad_device_8k_ffa = {
 	},
 };
 
+#if 0
 /* 7k FFA keypad platform device information */
 static struct gpio_event_matrix_info keypad_matrix_info_7k_ffa = {
 	.info.func	= gpio_event_matrix_func,
@@ -263,6 +295,27 @@ static struct gpio_event_info *keypad_info_7k_ffa[] = {
 	&keypad_matrix_info_7k_ffa.info
 };
 
+#endif
+
+#if 1
+/* opal keypad platform device information */
+static struct gpio_event_matrix_info keypad_matrix_info_7k_opal = {
+	.info.func	= gpio_event_matrix_func,
+	.keymap		= keypad_keymap_opal,
+	.output_gpios	= keypad_row_opal,
+	.input_gpios	= keypad_col_opal,
+	.noutputs	= ARRAY_SIZE(keypad_row_opal),
+	.ninputs	= ARRAY_SIZE(keypad_col_opal),
+	.settle_time.tv.nsec = 40 * NSEC_PER_USEC,
+	.poll_time.tv.nsec = 20 * NSEC_PER_MSEC,
+	.flags		= GPIOKPF_LEVEL_TRIGGERED_IRQ |
+			  GPIOKPF_PRINT_UNMAPPED_KEYS
+};
+
+static struct gpio_event_info *keypad_info_7k_ffa[] = {
+	&keypad_matrix_info_7k_opal.info
+};
+#endif
 static struct gpio_event_platform_data keypad_data_7k_ffa = {
 	.name		= "7k_ffa_keypad",
 	.info		= keypad_info_7k_ffa,

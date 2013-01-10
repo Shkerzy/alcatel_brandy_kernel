@@ -18,6 +18,8 @@
 
 #include <linux/types.h>
 #include <linux/spinlock.h>
+#include "proc_comm.h"
+
 
 struct smem_heap_info {
 	unsigned initialized;
@@ -249,6 +251,13 @@ enum {
 	SMEM_SMEM_LOG_POWER_WRAP,
 	SMEM_SMEM_LOG_POWER_EVENTS,
 	SMEM_ERR_CRASH_LOG,
+//{add for save dmesg log to EFS, xuxian 20110217
+	SMEM_ERR_DMESG_LOG,
+#if JRD_RECORD_SLEEP_UP_TIME
+	SMEM_RECORD_MODEM_SLEEP_TIME,	/*get tcxo shutdown time from modem efs*/
+	SMEM_RECORD_UPTIME_VOLTAGE,	/*get uptime&voltage from modem efs*/
+#endif
+//}
 	SMEM_ERR_F3_TRACE_LOG,
 	SMEM_SMD_BRIDGE_ALLOC_TABLE,
 	SMEM_SMDLITE_TABLE,

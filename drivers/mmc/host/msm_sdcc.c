@@ -51,6 +51,7 @@
 #include <mach/htc_pwrsink.h>
 
 
+#include <linux/miscdevice.h>
 #include "msm_sdcc.h"
 
 #define DRIVER_NAME "msm-sdcc"
@@ -68,6 +69,8 @@ static int  msmsdcc_dbg_init(void);
 #endif
 
 static unsigned int msmsdcc_pwrsave = 1;
+struct msmsdcc_host *wifi_host = NULL;
+struct device * wifi_host_dev = NULL;
 
 static struct mmc_command dummy52cmd;
 static struct mmc_request dummy52mrq = {
@@ -196,8 +199,13 @@ static inline uint32_t msmsdcc_fifo_addr(struct msmsdcc_host *host)
 static inline void msmsdcc_delay(struct msmsdcc_host *host)
 {
 	dsb();
-	udelay(1 + ((3 * USEC_PER_SEC) /
-		(host->clk_rate ? host->clk_rate : host->plat->msmsdcc_fmin)));
+
+	if(host->mmc->index == 0)
+		udelay(10 + ((3 * USEC_PER_SEC) /
+				(host->clk_rate ? host->clk_rate : host->plat->msmsdcc_fmin)));
+	else
+		udelay(1 + ((3 * USEC_PER_SEC) /
+				(host->clk_rate ? host->clk_rate : host->plat->msmsdcc_fmin)));
 }
 
 static inline void
@@ -532,6 +540,9 @@ msmsdcc_start_data(struct msmsdcc_host *host, struct mmc_data *data,
 	clks = (unsigned long long)data->timeout_ns * host->clk_rate;
 	do_div(clks, 1000000000UL);
 	timeout = data->timeout_clks + (unsigned int)clks*2 ;
+
+	if((host->mmc->index == 0) && (timeout < 3200000))//clk_rate=16000000
+		timeout = 9600000;
 
 	if (datactrl & MCI_DPSM_DMAENABLE) {
 		/* Save parameters for the exec function */
@@ -1903,6 +1914,12 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	mmc_add_host(mmc);
 
+        if (!strcmp(mmc_hostname(mmc), "mmc1")) {
+                wifi_host = host;
+                wifi_host_dev = &pdev->dev;
+                printk("### wifi_host %d\n", (int)wifi_host);
+        }
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	host->early_suspend.suspend = msmsdcc_early_suspend;
 	host->early_suspend.resume  = msmsdcc_late_resume;
@@ -2149,7 +2166,8 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 * simple become pm usage counter increment operations.
 		 */
 		pm_runtime_get_noresume(dev);
-		rc = mmc_suspend_host(mmc);
+                if(!mmc->card || mmc->card->type != MMC_TYPE_SDIO)
+                        rc = mmc_suspend_host(mmc);
 		pm_runtime_put_noidle(dev);
 
 		if (!rc) {
@@ -2158,7 +2176,14 @@ msmsdcc_runtime_suspend(struct device *dev)
 			 * off clocks to allow deep sleep (TCXO shutdown).
 			 */
 			mmc->ios.clock = 0;
-			mmc->ops->set_ios(host->mmc, &host->mmc->ios);
+                        //mmc->ops->set_ios(host->mmc, &host->mmc->ios);
+
+                        if (host->clks_on) {
+                                clk_disable(host->clk);
+                                if (!IS_ERR(host->pclk))
+                                        clk_disable(host->pclk);
+                                host->clks_on = 0;
+                        }
 
 			if (mmc->card && (mmc->card->type == MMC_TYPE_SDIO) &&
 				(mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ)) {
@@ -2187,11 +2212,25 @@ msmsdcc_runtime_resume(struct device *dev)
 	if (host->plat->is_sdio_al_client)
 		return 0;
 
+        if((!strcmp(mmc_hostname(mmc), "mmc1"))
+                        && (host->clks_on))
+        {
+//              if (host->clks_on)
+                        return 0;
+        }
+
 	if (mmc) {
 		mmc->ios.clock = host->clk_rate;
-		mmc->ops->set_ios(host->mmc, &host->mmc->ios);
+		//mmc->ops->set_ios(host->mmc, &host->mmc->ios);
 
 		spin_lock_irqsave(&host->lock, flags);
+                if (!host->clks_on) {
+                        if (!IS_ERR(host->pclk))
+                                clk_enable(host->pclk);
+                        clk_enable(host->clk);
+                        host->clks_on = 1;
+                }
+
 		writel(host->mci_irqenable, host->base + MMCIMASK0);
 		dsb();
 
@@ -2208,7 +2247,8 @@ msmsdcc_runtime_resume(struct device *dev)
 
 		spin_unlock_irqrestore(&host->lock, flags);
 
-		mmc_resume_host(mmc);
+                if(!mmc->card || mmc->card->type != MMC_TYPE_SDIO)
+                        mmc_resume_host(mmc);
 
 		/*
 		 * After resuming the host wait for sometime so that
@@ -2221,6 +2261,22 @@ msmsdcc_runtime_resume(struct device *dev)
 	}
 	return 0;
 }
+
+/*
+ *      added by jrd
+ */
+
+int wifi_call_resume(void)
+{
+        if (wifi_host && !wifi_host->clks_on) {
+                printk("## CALL WIFI RESUME ##\n");
+                msmsdcc_runtime_resume(wifi_host_dev);
+                //msmsdcc_pm_resume(wifi_host_dev);
+                return 1;
+        }
+        return 0;
+}
+EXPORT_SYMBOL(wifi_call_resume);
 
 static int msmsdcc_runtime_idle(struct device *dev)
 {
@@ -2297,6 +2353,35 @@ static struct platform_driver msmsdcc_driver = {
 	},
 };
 
+//add by GeNan
+extern struct resource resources_sdc1[3];
+extern struct platform_device *msm_device_sdc1;
+extern struct mmc_platform_data msm7x2x_sdc1_data;
+static int mmc_test_open(struct inode *inode, struct file *file)
+{
+	platform_device_unregister(msm_device_sdc1);
+	mdelay(300);
+
+	msm_device_sdc1 = platform_device_alloc("msm_sdcc", 1);
+	platform_device_add_resources(msm_device_sdc1, resources_sdc1, ARRAY_SIZE(resources_sdc1));
+	platform_device_add_data(msm_device_sdc1, &msm7x2x_sdc1_data, sizeof(msm7x2x_sdc1_data));
+	msm_device_sdc1->dev.coherent_dma_mask = 0xffffffff;
+	platform_device_add(msm_device_sdc1);
+
+	return 0;
+}
+
+static struct file_operations mmc_test = {
+	.owner = THIS_MODULE,
+	.open = mmc_test_open,
+};
+
+static struct miscdevice mmc_test_dev = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "sd_test",
+	.fops = &mmc_test,
+};
+
 static int __init msmsdcc_init(void)
 {
 #if defined(CONFIG_DEBUG_FS)
@@ -2307,6 +2392,9 @@ static int __init msmsdcc_init(void)
 		return ret;
 	}
 #endif
+	//add by GeNan
+	misc_register(&mmc_test_dev);
+
 	return platform_driver_register(&msmsdcc_driver);
 }
 

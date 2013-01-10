@@ -24,6 +24,8 @@
 #endif
 #include "power.h"
 
+#include "../../arch/arm/mach-msm/proc_comm.h"
+
 enum {
 	DEBUG_EXIT_SUSPEND = 1U << 0,
 	DEBUG_WAKEUP = 1U << 1,
@@ -317,6 +319,12 @@ int suspend_sys_sync_wait(void)
 	return 0;
 }
 
+#if JRD_RECORD_SLEEP_UP_TIME
+extern struct timespec jrd_b_ts;
+extern bool jrd_start_pwd_record;
+extern signed long long jrd_total_sleep_time;
+#endif
+
 static void suspend(struct work_struct *work)
 {
 	int ret;
@@ -338,10 +346,21 @@ static void suspend(struct work_struct *work)
 		struct rtc_time tm;
 		getnstimeofday(&ts);
 		rtc_time_to_tm(ts.tv_sec, &tm);
-		pr_info("suspend: exit suspend, ret = %d "
-			"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n", ret,
+
+#if JRD_RECORD_SLEEP_UP_TIME
+                if (jrd_start_pwd_record == true)
+                {
+                    if (ts.tv_sec > jrd_b_ts.tv_sec)
+                        jrd_total_sleep_time = (ts.tv_sec - jrd_b_ts.tv_sec);
+                    else
+                        jrd_total_sleep_time = 0;
+                }
+
+		pr_info("******suspend: exit suspend, ret = %d "
+			"(%d-%02d-%02d %02d:%02d:%02d.%09lu; time:%lu UTC)\n", ret,
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec, (ts.tv_sec - jrd_b_ts.tv_sec));
+#endif
 	}
 	if (current_event_num == entry_event_num) {
 		if (debug_mask & DEBUG_SUSPEND)

@@ -62,6 +62,19 @@ static struct resource resources_uart2[] = {
 	},
 };
 
+static struct resource resources_uart3[] = {
+	{
+		.start	= INT_UART3,
+		.end	= INT_UART3,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.start	= MSM_UART3_PHYS,
+		.end	= MSM_UART3_PHYS + MSM_UART3_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
 struct platform_device msm_device_uart1 = {
 	.name	= "msm_serial",
 	.id	= 0,
@@ -74,6 +87,13 @@ struct platform_device msm_device_uart2 = {
 	.id	= 1,
 	.num_resources	= ARRAY_SIZE(resources_uart2),
 	.resource	= resources_uart2,
+};
+
+struct platform_device msm_device_uart3 = {
+	.name	= "msm_serial",
+	.id	= 2,
+	.num_resources	= ARRAY_SIZE(resources_uart3),
+	.resource	= resources_uart3,
 };
 
 #define MSM_UART1DM_PHYS      0xA0200000
@@ -392,7 +412,7 @@ struct platform_device msm_device_dmov = {
 #define MSM_SDC2_BASE         0xA0500000
 #define MSM_SDC3_BASE         0xA0600000
 #define MSM_SDC4_BASE         0xA0700000
-static struct resource resources_sdc1[] = {
+struct resource resources_sdc1[] = {
 	{
 		.start	= MSM_SDC1_BASE,
 		.end	= MSM_SDC1_BASE + SZ_4K - 1,
@@ -464,15 +484,7 @@ static struct resource resources_sdc4[] = {
 	},
 };
 
-struct platform_device msm_device_sdc1 = {
-	.name		= "msm_sdcc",
-	.id		= 1,
-	.num_resources	= ARRAY_SIZE(resources_sdc1),
-	.resource	= resources_sdc1,
-	.dev		= {
-		.coherent_dma_mask	= 0xffffffff,
-	},
-};
+struct platform_device *msm_device_sdc1;
 
 struct platform_device msm_device_sdc2 = {
 	.name		= "msm_sdcc",
@@ -505,7 +517,7 @@ struct platform_device msm_device_sdc4 = {
 };
 
 static struct platform_device *msm_sdcc_devices[] __initdata = {
-	&msm_device_sdc1,
+	NULL,
 	&msm_device_sdc2,
 	&msm_device_sdc3,
 	&msm_device_sdc4,
@@ -782,6 +794,7 @@ struct clk_lookup msm_clocks_7x27[] = {
 	CLK_PCOM("tsif_pclk",	TSIF_P_CLK,	NULL, 0),
 	CLK_PCOM("uart_clk",	UART1_CLK,	"msm_serial.0", OFF),
 	CLK_PCOM("uart_clk",	UART2_CLK,	"msm_serial.1", 0),
+	CLK_PCOM("uart_clk",	UART3_CLK,	"msm_serial.2", OFF),
 	CLK_PCOM("uartdm_clk",	UART1DM_CLK,	"msm_serial_hs.0", OFF),
 	CLK_PCOM("uartdm_clk",	UART2DM_CLK,	"msm_serial_hs.1", 0),
 	CLK_PCOM("usb_hs_clk",	USB_HS_CLK,	NULL, OFF),

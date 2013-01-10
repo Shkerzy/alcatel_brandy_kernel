@@ -155,6 +155,7 @@ int mmc_send_app_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 
 	memset(&cmd, 0, sizeof(struct mmc_command));
 
+	printk("%s %s %d=====================\n", __FILE__, __func__, __LINE__);
 	cmd.opcode = SD_APP_OP_COND;
 	if (mmc_host_is_spi(host))
 		cmd.arg = ocr & (1 << 30); /* SPI only defines one bit */
