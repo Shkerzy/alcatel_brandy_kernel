@@ -25,7 +25,7 @@
 modules.builtin
 *.elf
 *.bin
-*.gz
+*.gzip
 *.bz2
 *.lzma
 *.lzo
@@ -73,6 +73,8 @@ GPATH
 GRTAGS
 GSYMS
 GTAGS
+
+smd_rpc_sym.c
 
 *.orig
 *~
