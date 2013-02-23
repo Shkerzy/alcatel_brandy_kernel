@@ -671,7 +671,7 @@ struct mdp_blit_req *req, struct file *p_src_file, struct file *p_dst_file)
 		break;
 
 	case MDP_Y_CBCR_H2V2:
-	case MDP_Y_CBCR_H2V2_ADRENO:
+//	case MDP_Y_CBCR_H2V2_ADRENO:
 	case MDP_Y_CRCB_H2V2:
 		if (iBuf->ibuf_type == MDP_Y_CBCR_H2V2)
 			dst_packPattern =
@@ -873,6 +873,7 @@ struct mdp_blit_req *req, struct file *p_src_file, struct file *p_dst_file)
 		break;
 
 	case MDP_Y_CBCR_H2V2:
+	case MDP_Y_CBCR_H2V2_ADRENO:
 	case MDP_Y_CRCB_H2V2:
 		inpBpp = 1;
 		src1 = (uint8 *) iBuf->mdpImg.cbcr_addr;

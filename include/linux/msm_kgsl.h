@@ -169,9 +169,6 @@ struct kgsl_device_pwr_data {
 	int (*set_grp_async)(void);
 	unsigned int idle_timeout;
 	unsigned int nap_allowed;
-	unsigned int pt_va_size;
-	unsigned int pt_max_count;
-	bool pwrrail_first;
 };
 
 struct kgsl_clk_data {
