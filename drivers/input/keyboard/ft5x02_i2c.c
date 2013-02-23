@@ -216,6 +216,8 @@ static void ft5x0x_ts_release(struct ft5x02_ts_data *data)
 	input_report_key(data->input_dev, KEY_MENU, 0);
 	input_report_key(data->input_dev, KEY_SEARCH, 0);
 	input_report_key(data->input_dev, KEY_BACK, 0);
+	input_report_abs(data->input_dev, ABS_PRESSURE, 255);
+	input_report_key(data->input_dev, BTN_TOUCH, 1);
 	input_sync(data->input_dev);
 }
 
@@ -360,6 +362,7 @@ static void ft5x02_report_value(struct ft5x02_ts_data *data )
 			break;
 	}
 
+	input_report_key(data->input_dev, BTN_TOUCH, event->touch_point);
 	input_sync(data->input_dev);
 
 }	/*end ft5x0x_report_value*/
@@ -521,6 +524,7 @@ static int ft5x02_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	input_set_abs_params(ts->input_dev, ABS_HAT0X, 0, 320, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_HAT0Y, 0, 480+96, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, 4, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
 
 	/* ts->input_dev->name = ts->keypad_info->name; */
 	ret = input_register_device(ts->input_dev);
