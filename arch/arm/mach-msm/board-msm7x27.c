@@ -73,7 +73,9 @@
 #include <linux/usb/android_composite.h>
 #endif
 
+#ifdef CONFIG_KEYBOARD_MXT224
 #include <linux/atmel_qt602240.h>
+#endif
 
 #ifdef CONFIG_ARCH_MSM7X25
 #define MSM_PMEM_MDP_SIZE	0xb21000
@@ -1185,6 +1187,7 @@ static struct platform_device msm_bluesleep_device = {
 	.resource	= bluesleep_resources,
 };
 
+#ifdef CONFIG_KEYBOARD_MXT224
 struct atmel_i2c_platform_data mxt224_ts_data[] = {
 {
 	.version = 0x16,
@@ -1220,20 +1223,24 @@ struct atmel_i2c_platform_data mxt224_ts_data[] = {
 //},
 }
 };
+#endif
 
 static struct i2c_board_info i2c_devices_1[] = {
+#ifdef CONFIG_KEYBOARD_MXT224
 	{
 		I2C_BOARD_INFO(ATMEL_QT602240_NAME, 0x94>> 1),
 		.platform_data = &mxt224_ts_data,
 		.irq = MSM_GPIO_TO_INT(19),
 	},
+#endif
 };
 
 static struct i2c_board_info i2c_devices[] = {
+#ifdef CONFIG_KEYBOARD_FT5X02
 	{
 		I2C_BOARD_INFO("ft5x02-ts", 0x70>>1),
 	},
-
+#endif
 #ifdef CONFIG_MT9D112
 	{
 		I2C_BOARD_INFO("mt9d112", 0x78 >> 1),
