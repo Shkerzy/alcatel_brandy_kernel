@@ -74,6 +74,8 @@ GRTAGS
 GSYMS
 GTAGS
 
+smd_rpc_sym.c
+
 *.orig
 *~
 \#*#
