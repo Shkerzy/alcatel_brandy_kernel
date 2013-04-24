@@ -2396,6 +2396,21 @@ config FB_MSM_LCDC_TOSHIBA_WVGA_PT
 	select FB_MSM_LCDC_PANEL
 	default n
 
+config FB_MSM_LCDC_ILI9481
+        bool
+        select FB_MSM_LCDC_PANEL
+        default n
+
+config FB_MSM_LCDC_R61529
+        bool
+        select FB_MSM_LCDC_PANEL
+        default n
+
+config FB_MSM_LCDC_INNOLUX_ILI9481
+        bool
+        select FB_MSM_LCDC_PANEL
+        default n
+
 config FB_MSM_LCDC_SHARP_WVGA_PT
 	bool
 	select FB_MSM_LCDC_PANEL
@@ -2476,6 +2491,27 @@ config FB_MSM_LCDC_TOSHIBA_WVGA_PT_PANEL
 	---help---
 	  Support for LCDC Toshiba WVGA PT (480x800) panel
 
+config FB_MSM_LCDC_ILI9481_PANEL
+        depends on FB_MSM_LCDC_HW
+        bool "LCDC ILI9481 Panel"
+        select FB_MSM_LCDC_ILI9481
+        ---help---
+          Support for LCDC ILI9481 (320x480) panel
+
+config FB_MSM_LCDC_R61529_PANEL
+        depends on FB_MSM_LCDC_HW
+        bool "LCDC R61529 Panel"
+        select FB_MSM_LCDC_R61529
+        ---help---
+          Support for LCDC R61529 (320x480) panel
+
+config FB_MSM_LCDC_INNOLUX_ILI9481_PANEL
+        depends on FB_MSM_LCDC_HW
+        bool "LCDC INNOLUX ILI9481 Panel"
+        select FB_MSM_LCDC_INNOLUX_ILI9481
+        ---help---
+          Support for LCDC INNOLUX ILI9481 (320x480) panel
+
 config FB_MSM_LCDC_SHARP_WVGA_PT_PANEL
 	depends on FB_MSM_LCDC_HW
 	bool "LCDC Sharp WVGA PT Panel"
@@ -2510,6 +2546,9 @@ config FB_MSM_TRY_MDDI_CATCH_LCDC_PRISM
 	select FB_MSM_LCDC_GORDON_VGA
 	select FB_MSM_LCDC_WXGA
 	select FB_MSM_LCDC_TOSHIBA_WVGA_PT
+	select FB_MSM_LCDC_ILI9481
+	select FB_MSM_LCDC_R61529
+	select FB_MSM_LCDC_INNOLUX_ILI9481
 	select FB_MSM_LCDC_SHARP_WVGA_PT
 	select FB_MSM_LCDC_ST15_WXGA
 	---help---
