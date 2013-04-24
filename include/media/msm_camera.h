@@ -559,7 +559,8 @@ struct msm_snapshot_pp_status {
 #define CFG_SENSOR_INIT    29
 #define CFG_GET_3D_CALI_DATA 30
 #define CFG_GET_CALIB_DATA		31
-#define CFG_MAX			32
+#define CFG_SET_NIGHTMODE		32
+#define CFG_MAX			33
 
 
 #define MOVE_NEAR	0
@@ -689,6 +690,7 @@ struct sensor_cfg_data {
 		struct wb_info_cfg wb_info;
 		struct sensor_3d_exp_cfg sensor_3d_exp;
 		struct sensor_calib_data calib_info;
+		int value;
 	} cfg;
 };
 
@@ -744,4 +746,72 @@ struct msm_camsensor_info {
 	int8_t total_steps;
 	uint8_t support_3d;
 };
+/******************************************/
+#if 0
+/* Brightness type, used for CAMERA_PARM_BRIGHTNESS */
+enum camera_brightness_type {
+	CAMERA_BRIGHTNESS_MIN = 0,
+	CAMERA_BRIGHTNESS_0 = 0,
+	CAMERA_BRIGHTNESS_1 = 1,
+	CAMERA_BRIGHTNESS_2 = 2,
+	CAMERA_BRIGHTNESS_3 = 3,
+	CAMERA_BRIGHTNESS_4 = 4,
+	CAMERA_BRIGHTNESS_5 = 5,
+	CAMERA_BRIGHTNESS_DEFAULT = 5,
+	CAMERA_BRIGHTNESS_6 = 6,
+	CAMERA_BRIGHTNESS_7 = 7,
+	CAMERA_BRIGHTNESS_8 = 8,
+	CAMERA_BRIGHTNESS_9 = 9,
+	CAMERA_BRIGHTNESS_10 = 10,
+	CAMERA_BRIGHTNESS_MAX = 10
+};
+
+enum camera_antibanding_type {
+	CAMERA_ANTIBANDING_OFF,
+	CAMERA_ANTIBANDING_60HZ,
+	CAMERA_ANTIBANDING_50HZ,
+	CAMERA_ANTIBANDING_AUTO,
+	CAMERA_MAX_ANTIBANDING,
+};
+
+/* White balancing type, used for CAMERA_PARM_WHITE_BALANCING */
+enum camera_wb_type {
+	CAMERA_WB_MIN_MINUS_1,
+	CAMERA_WB_AUTO = 1,  /* This list must match aeecamera.h */
+	CAMERA_WB_CUSTOM,
+	CAMERA_WB_INCANDESCENT,
+	CAMERA_WB_FLUORESCENT,
+	CAMERA_WB_DAYLIGHT,
+	CAMERA_WB_CLOUDY_DAYLIGHT,
+	CAMERA_WB_TWILIGHT,
+	CAMERA_WB_SHADE,
+	CAMERA_WB_MAX_PLUS_1
+};
+
+enum camera_nightshot_mode_type {
+	CAMERA_NIGHTSHOT_MODE_OFF,
+	CAMERA_NIGHTSHOT_MODE_ON,
+	CAMERA_MAX_NIGHTSHOT_MODE
+};
+
+/* Effect type, used for CAMERA_PARM_EFFECT */
+
+enum camera_effect_type {
+	CAMERA_EFFECT_MIN_MINUS_1,
+	CAMERA_EFFECT_OFF = 1,  /* This list must match aeecamera.h */
+	CAMERA_EFFECT_MONO,
+	CAMERA_EFFECT_NEGATIVE,
+	CAMERA_EFFECT_SOLARIZE,
+	CAMERA_EFFECT_PASTEL,
+	CAMERA_EFFECT_MOSAIC,
+	CAMERA_EFFECT_RESIZE,
+	CAMERA_EFFECT_SEPIA,
+	CAMERA_EFFECT_POSTERIZE,
+	CAMERA_EFFECT_WHITEBOARD,
+	CAMERA_EFFECT_BLACKBOARD,
+	CAMERA_EFFECT_AQUA,
+	CAMERA_EFFECT_MAX_PLUS_1
+};
+#endif
+
 #endif /* __LINUX_MSM_CAMERA_H */

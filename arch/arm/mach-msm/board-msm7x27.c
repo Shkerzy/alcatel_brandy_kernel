@@ -55,6 +55,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
 #include <linux/i2c.h>
+#include <linux/i2c-gpio.h>
 #include <linux/android_pmem.h>
 #include <mach/camera.h>
 
@@ -1107,11 +1108,24 @@ static struct i2c_board_info i2c_devices[] = {
 #endif
 };
 
+static struct i2c_board_info i2c_devices_camera[]={
+#ifdef CONFIG_OV7690
+	{
+		I2C_BOARD_INFO("ov7690", 0x42 >> 1),
+	},
+#endif
+#ifdef CONFIG_OV5647
+	{
+		I2C_BOARD_INFO("ov5647", 0x6c >> 1),
+	},
+#endif
+};
+
 #ifdef CONFIG_MSM_CAMERA
 static uint32_t camera_off_gpio_table[] = {
 	/* parallel CAMERA interfaces */
-	GPIO_CFG(0,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT0 */
-	GPIO_CFG(1,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT1 */
+	GPIO_CFG(0,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* RESET */
+	GPIO_CFG(1,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* PDN */
 	GPIO_CFG(2,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT2 */
 	GPIO_CFG(3,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT3 */
 	GPIO_CFG(4,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT4 */
@@ -1126,12 +1140,14 @@ static uint32_t camera_off_gpio_table[] = {
 	GPIO_CFG(13, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* HSYNC_IN */
 	GPIO_CFG(14, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* VSYNC_IN */
 	GPIO_CFG(15, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* MCLK */
+	GPIO_CFG(23,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* sub PDN */
+	GPIO_CFG(78,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* vcm */
 };
 
 static uint32_t camera_on_gpio_table[] = {
 	/* parallel CAMERA interfaces */
-	GPIO_CFG(0,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT0 */
-	GPIO_CFG(1,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT1 */
+	GPIO_CFG(0,  1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* RESET */
+	GPIO_CFG(1,  1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* PDN */
 	GPIO_CFG(2,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT2 */
 	GPIO_CFG(3,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT3 */
 	GPIO_CFG(4,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT4 */
@@ -1146,6 +1162,8 @@ static uint32_t camera_on_gpio_table[] = {
 	GPIO_CFG(13, 1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* HSYNC_IN */
 	GPIO_CFG(14, 1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* VSYNC_IN */
 	GPIO_CFG(15, 1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_16MA), /* MCLK */
+	GPIO_CFG(23,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* sub PDN */
+	GPIO_CFG(78,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* vcm */
 	};
 
 static void config_gpio_table(uint32_t *table, int len)
@@ -1176,7 +1194,7 @@ static void msm_camera_vreg_config(int vreg_en)
 			return;
 		}
 
-		rc = vreg_set_level(vreg_gp2, 1800);
+		rc = vreg_set_level(vreg_gp2, 1500);
 		if (rc) {
 			printk(KERN_ERR "%s: GP2 set_level failed (%d)\n",
 				__func__, rc);
@@ -1191,7 +1209,7 @@ static void msm_camera_vreg_config(int vreg_en)
 			return;
 		}
 
-		rc = vreg_set_level(vreg_gp3, 2850);
+		rc = vreg_set_level(vreg_gp3, 2800);
 		if (rc) {
 			printk(KERN_ERR "%s: GP3 set level failed (%d)\n",
 				__func__, rc);
@@ -1222,6 +1240,12 @@ static void msm_camera_vreg_config(int vreg_en)
 			printk(KERN_ERR "%s: GP3 disable failed (%d)\n",
 				__func__, rc);
 		}
+		gpio_request(0, "ov5647");
+		gpio_direction_output(0, 1);
+		gpio_free(0);
+		gpio_request(23, "ov7690");
+		gpio_direction_output(23, 1);
+		gpio_free(23);
 	}
 }
 
@@ -1269,8 +1293,8 @@ int pmic_set_flash_led_current(enum pmic8058_leds id, unsigned mA)
 static struct msm_camera_sensor_flash_src msm_flash_src = {
 	.flash_sr_type = MSM_CAMERA_FLASH_SRC_PMIC,
 	._fsrc.pmic_src.num_of_src = 1,
-	._fsrc.pmic_src.low_current  = 30,
-	._fsrc.pmic_src.high_current = 100,
+	._fsrc.pmic_src.low_current  = 68,
+	._fsrc.pmic_src.high_current = 200,
 	._fsrc.pmic_src.led_src_1 = 0,
 	._fsrc.pmic_src.led_src_2 = 0,
 	._fsrc.pmic_src.pmic_set_current = pmic_set_flash_led_current,
@@ -1372,6 +1396,51 @@ static struct platform_device msm_camera_sensor_mt9p012_km = {
 };
 #endif
 
+#ifdef CONFIG_OV5647
+static struct msm_camera_sensor_flash_data flash_ov5647 = {
+	.flash_type = MSM_CAMERA_FLASH_LED,
+	.flash_src  = &msm_flash_src
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_ov5647_data = {
+	.sensor_name    = "ov5647",
+	.sensor_reset   = 1,
+	.sensor_pwd     = 0,
+	.vcm_pwd        = 78,
+	.vcm_enable     = 0,
+	.pdata          = &msm_camera_device_data,
+	.flash_data     = &flash_ov5647
+};
+
+static struct platform_device msm_camera_sensor_ov5647 = {
+	.name      = "msm_camera_ov5647",
+	.dev       = {
+		.platform_data = &msm_camera_sensor_ov5647_data,
+	},
+};
+#endif
+
+#ifdef CONFIG_OV7690
+static struct msm_camera_sensor_flash_data flash_ov7690 = {
+	.flash_type = MSM_CAMERA_FLASH_NONE,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_ov7690_data = {
+	.sensor_name    = "ov7690",
+	.sensor_pwd     = 23,
+	.vcm_pwd        = 0,
+	.pdata          = &msm_camera_device_data,
+	.flash_data     = &flash_ov7690
+};
+
+static struct platform_device msm_camera_sensor_ov7690 = {
+	.name      = "msm_camera_ov7690",
+	.dev       = {
+		.platform_data = &msm_camera_sensor_ov7690_data,
+	},
+};
+#endif
+
 #ifdef CONFIG_MT9T013
 static struct msm_camera_sensor_flash_data flash_mt9t013 = {
 	.flash_type = MSM_CAMERA_FLASH_LED,
@@ -1447,6 +1516,7 @@ static struct platform_device msm_batt_device = {
 };
 
 
+static struct platform_device camera_i2c_gpio_device;
 static struct platform_device *devices[] __initdata = {
 	&msm_device_smd,
 	&msm_device_dmov,
@@ -1476,6 +1546,7 @@ static struct platform_device *devices[] __initdata = {
 	&android_usb_device,
 #endif
 	&msm_device_i2c,
+	&camera_i2c_gpio_device,
 	&smc91x_device,
 	&msm_device_tssc,
 	&android_pmem_kernel_ebi1_device,
@@ -1505,6 +1576,12 @@ static struct platform_device *devices[] __initdata = {
 #endif
 #ifdef CONFIG_MT9P012_KM
 	&msm_camera_sensor_mt9p012_km,
+#endif
+#ifdef CONFIG_OV7690
+	&msm_camera_sensor_ov7690,
+#endif
+#ifdef CONFIG_OV5647
+	&msm_camera_sensor_ov5647,
 #endif
 #ifdef CONFIG_VB6801
 	&msm_camera_sensor_vb6801,
@@ -1891,6 +1968,32 @@ static void __init msm_device_i2c_init(void)
 	msm_device_i2c.dev.platform_data = &msm_i2c_pdata;
 }
 
+#define CAMERA_GPIO_I2C_SDA 107
+#define CAMERA_GPIO_I2C_SCK 93
+
+static uint32_t camera_i2c_gpio_table[] = {
+
+	GPIO_CFG(CAMERA_GPIO_I2C_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* SDA */
+	GPIO_CFG(CAMERA_GPIO_I2C_SCK,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* SCL */
+};
+
+static struct i2c_gpio_platform_data camera_i2c_gpio_data = {
+	.sda_pin		= 107,
+	.scl_pin		= 93,
+	.sda_is_open_drain	= 0,
+	.scl_is_open_drain	= 0,
+	.udelay			= 2,
+};
+
+static struct platform_device camera_i2c_gpio_device = {
+	.name		= "i2c-gpio",
+	.id		= 2,
+	.dev		= {
+		.platform_data	= &camera_i2c_gpio_data,
+	},
+
+};
+
 static void usb_mpp_init(void)
 {
 	unsigned rc;
@@ -2062,7 +2165,9 @@ static void __init msm7x2x_init(void)
 	config_camera_off_gpios(); /* might not be necessary */
 #endif
 	msm_device_i2c_init();
+	config_gpio_table(camera_i2c_gpio_table,ARRAY_SIZE(camera_i2c_gpio_table));
 	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
+	i2c_register_board_info(2, i2c_devices_camera, ARRAY_SIZE(i2c_devices_camera));
 
 #ifdef CONFIG_SURF_FFA_GPIO_KEYPAD
 	if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa())
