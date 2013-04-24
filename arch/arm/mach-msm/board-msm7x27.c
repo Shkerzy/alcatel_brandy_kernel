@@ -1076,6 +1076,11 @@ static struct platform_device msm_bluesleep_device = {
 };
 
 static struct i2c_board_info i2c_devices[] = {
+#ifdef CONFIG_TOUCHSCREEN_FT5X02
+	{
+		I2C_BOARD_INFO("ft5x02-ts", 0x70>>1),
+	},
+#endif
 #ifdef CONFIG_MT9D112
 	{
 		I2C_BOARD_INFO("mt9d112", 0x78 >> 1),
