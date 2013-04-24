@@ -89,6 +89,10 @@
 #define PMEM_KERNEL_EBI1_SIZE	0x1C000
 #endif
 
+#define TDT_LCD			0x10
+#define TRULY_LCD		0x01
+#define FOXCONN_LCD		0x00
+
 static struct resource smc91x_resources[] = {
 	[0] = {
 		.start	= 0x9C004300,
@@ -728,7 +732,7 @@ static int gpio_array_num[] = {
 				GPIO_OUT_88
 				};
 
-static void lcdc_gordon_gpio_init(void)
+static void lcdc_gpio_init(void)
 {
 	if (gpio_request(GPIO_OUT_132, "spi_clk"))
 		pr_err("failed to request gpio spi_clk\n");
@@ -764,7 +768,7 @@ static void config_lcdc_gpio_table(uint32_t *table, int len, unsigned enable)
 	}
 }
 
-static void lcdc_gordon_config_gpios(int enable)
+static void lcdc_config_gpios(int enable)
 {
 	config_lcdc_gpio_table(lcdc_gpio_table,
 		ARRAY_SIZE(lcdc_gpio_table), enable);
@@ -830,16 +834,15 @@ static struct lcdc_platform_data lcdc_pdata = {
 	.lcdc_power_save   = msm_fb_lcdc_power_save,
 };
 
-static struct msm_panel_common_pdata lcdc_gordon_panel_data = {
-	.panel_config_gpio = lcdc_gordon_config_gpios,
+static struct msm_panel_common_pdata lcdc_panel_pdata = {
+	.panel_config_gpio = lcdc_config_gpios,
 	.gpio_num          = gpio_array_num,
 };
 
-static struct platform_device lcdc_gordon_panel_device = {
-	.name   = "lcdc_gordon_vga",
+static struct platform_device lcdc_panel_device = {
 	.id     = 0,
 	.dev    = {
-		.platform_data = &lcdc_gordon_panel_data,
+		.platform_data = &lcdc_panel_pdata,
 	}
 };
 
@@ -854,7 +857,7 @@ static int msm_fb_detect_panel(const char *name)
 	int ret = -EPERM;
 
 	if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa()) {
-		if (!strcmp(name, "lcdc_gordon_vga"))
+		if (!strcmp(name, lcdc_panel_device.name))
 			ret = 0;
 		else
 			ret = -ENODEV;
@@ -1437,7 +1440,7 @@ static struct platform_device *devices[] __initdata = {
 	&android_pmem_adsp_device,
 	&android_pmem_audio_device,
 	&msm_fb_device,
-	&lcdc_gordon_panel_device,
+	&lcdc_panel_device,
 	&msm_device_uart_dm1,
 #ifdef CONFIG_BT
 	&msm_bt_power_device,
@@ -1880,8 +1883,40 @@ static void msm7x27_wlan_init(void)
 	}
 }
 
+/*
+ * MSM7x27 lcd module type is detected by the voltage of GPIO_88, which
+ * high or low of it figures P5562 and ILI9481 relevantly.
+ */
+static int msm7x27_lcd_id_detect(void)
+{
+	unsigned int rc;
+
+	rc = gpio_tlmm_config(GPIO_CFG(88,0,	GPIO_CFG_INPUT,
+						GPIO_CFG_NO_PULL,GPIO_CFG_2MA),
+						GPIO_CFG_ENABLE);
+	if(rc){
+		printk(KERN_ERR "gpio_tlmm_config failed\n");
+		return rc;
+	}
+
+	rc = gpio_tlmm_config(GPIO_CFG(28,0,	GPIO_CFG_INPUT,
+						GPIO_CFG_NO_PULL,GPIO_CFG_2MA),
+						GPIO_CFG_ENABLE);
+	if(rc){
+		printk(KERN_ERR "gpio_tlmm_config failed\n");
+		return rc;
+	}
+
+	rc =( (gpio_get_value(88) << 4)  | gpio_get_value(28));
+
+	printk(KERN_ERR"---------------------------------------------------------rc =:0x%x\n",rc);
+
+	return rc;
+}
+
 static void __init msm7x2x_init(void)
 {
+	int rv;
 
 #ifdef CONFIG_ARCH_MSM7X25
 	msm_clock_init(msm_clocks_7x25, msm_num_clocks_7x25);
@@ -1950,6 +1985,25 @@ static void __init msm7x2x_init(void)
 #if defined(CONFIG_TSIF) || defined(CONFIG_TSIF_MODULE)
 	msm_device_tsif.dev.platform_data = &tsif_platform_data;
 #endif
+
+	rv = msm7x27_lcd_id_detect();
+
+	switch (rv)
+	{
+		case TDT_LCD:
+			lcdc_panel_device.name = "lcdc_ili9481_rgb";
+			break;
+		case TRULY_LCD:
+			lcdc_panel_device.name = "lcdc_r61529_rgb";
+			break;
+		case FOXCONN_LCD:
+			lcdc_panel_device.name = "lcdc_innolux_ili9481_rgb";
+			break;
+		default :
+			lcdc_panel_device.name = "empty";
+			break;
+	}
+
 	platform_add_devices(msm_footswitch_devices,
 			     msm_num_footswitch_devices);
 	platform_add_devices(devices, ARRAY_SIZE(devices));
@@ -1965,7 +2019,7 @@ static void __init msm7x2x_init(void)
 	else
 		platform_device_register(&keypad_device_surf);
 #endif
-	lcdc_gordon_gpio_init();
+	lcdc_gpio_init();
 	msm_fb_add_devices();
 #ifdef CONFIG_USB_EHCI_MSM_72K
 	msm7x2x_init_host();
