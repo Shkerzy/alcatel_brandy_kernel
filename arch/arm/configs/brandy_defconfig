@@ -1152,6 +1152,7 @@ CONFIG_INPUT_GPIO=y
 # CONFIG_INPUT_PCF8574 is not set
 # CONFIG_INPUT_GPIO_ROTARY_ENCODER is not set
 # CONFIG_BOSCH_BMA150 is not set
+CONFIG_BMA222_I2C=y
 
 #
 # Hardware I/O ports
@@ -1218,6 +1219,7 @@ CONFIG_I2C_BOARDINFO=y
 CONFIG_I2C_COMPAT=y
 CONFIG_I2C_CHARDEV=y
 CONFIG_I2C_HELPER_AUTO=y
+CONFIG_I2C_ALGOBIT=y
 
 #
 # I2C Hardware Bus support
@@ -1227,7 +1229,7 @@ CONFIG_I2C_HELPER_AUTO=y
 # I2C system bus drivers (mostly embedded / system-on-chip)
 #
 # CONFIG_I2C_DESIGNWARE is not set
-# CONFIG_I2C_GPIO is not set
+CONFIG_I2C_GPIO=y
 CONFIG_I2C_MSM=y
 # CONFIG_I2C_QUP is not set
 # CONFIG_I2C_OCORES is not set

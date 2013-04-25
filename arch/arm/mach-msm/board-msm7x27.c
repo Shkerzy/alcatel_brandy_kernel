@@ -1113,6 +1113,44 @@ static struct i2c_board_info i2c_devices[] = {
 #endif
 };
 
+#if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
+#if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
+#define GPIO_BMA222_I2C_INT  27
+static struct i2c_board_info i2c_devices_3[] = {
+	{
+		I2C_BOARD_INFO("bma222", 0x08),
+		.platform_data = NULL,
+		.irq = MSM_GPIO_TO_INT(GPIO_BMA222_I2C_INT)
+	},
+};
+
+#define BMA222_SDA 16
+#define BMA222_SCL 17
+static uint32_t bma222_i2c_gpio_table[] = {
+		GPIO_CFG(BMA222_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), /* DAT0 */
+		GPIO_CFG(BMA222_SCL,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), /* DAT1 */
+		//GPIO_CFG(GPIO_BMA222_I2C_INT,  0, GPIO_INPUT,  GPIO_NO_PULL, GPIO_2MA),
+};
+
+static struct i2c_gpio_platform_data bma222_i2c_gpio_data = {
+	.sda_pin		= 16,
+	.scl_pin		= 17,
+	.sda_is_open_drain	= 0,
+	.scl_is_open_drain	= 0,
+	.udelay			= 2,
+};
+
+static struct platform_device bma222_i2c_gpio_device = {
+	.name		= "i2c-gpio",
+	.id		= 3,
+	.dev		= {
+		.platform_data	= &bma222_i2c_gpio_data,
+	},
+
+};
+#endif
+#endif
+
 static struct i2c_board_info i2c_devices_camera[]={
 #ifdef CONFIG_OV7690
 	{
@@ -1567,6 +1605,11 @@ static struct platform_device *devices[] __initdata = {
 	&msm_device_pmic_leds,
 	&msm_device_snd,
 	&msm_device_adspdec,
+#if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
+#if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
+	&bma222_i2c_gpio_device,
+#endif
+#endif
 #ifdef CONFIG_MT9T013
 	&msm_camera_sensor_mt9t013,
 #endif
@@ -1941,7 +1984,7 @@ msm_i2c_gpio_config(int iface, int config_type)
 }
 
 static struct msm_i2c_platform_data msm_i2c_pdata = {
-	.clk_freq = 100000,
+	.clk_freq = 300000,
 	.rmutex  = 0,
 	.pri_clk = 60,
 	.pri_dat = 61,
@@ -2173,6 +2216,11 @@ static void __init msm7x2x_init(void)
 	config_gpio_table(camera_i2c_gpio_table,ARRAY_SIZE(camera_i2c_gpio_table));
 	i2c_register_board_info(0, i2c_devices, ARRAY_SIZE(i2c_devices));
 	i2c_register_board_info(2, i2c_devices_camera, ARRAY_SIZE(i2c_devices_camera));
+#if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
+#if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
+	i2c_register_board_info(3, i2c_devices_3, ARRAY_SIZE(i2c_devices_3));
+#endif
+#endif
 
 #ifdef CONFIG_SURF_FFA_GPIO_KEYPAD
 	if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa())
@@ -2195,6 +2243,12 @@ static void __init msm7x2x_init(void)
 		msm_pm_set_platform_data(msm7x25_pm_data,
 					ARRAY_SIZE(msm7x25_pm_data));
 	msm7x27_wlan_init();
+
+#if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
+#if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
+	config_gpio_table(bma222_i2c_gpio_table,ARRAY_SIZE(bma222_i2c_gpio_table));
+#endif
+#endif
 }
 
 static unsigned pmem_kernel_ebi1_size = PMEM_KERNEL_EBI1_SIZE;
