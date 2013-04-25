@@ -1,0 +1,13 @@
+#
+# Miscellaneous I2C chip drivers configuration
+#
+
+menu "Miscellaneous I2C Chip support"
+
+config SENSORS_AKM8975
+	tristate "AKM8975 Compass Driver"
+	depends on I2C_GPIO
+	help
+	  AKM8975 Compass Driver implemented by ALCATEL.
+
+endmenu

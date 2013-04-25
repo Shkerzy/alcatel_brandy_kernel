@@ -1103,6 +1103,48 @@ static struct platform_device bma222_i2c_gpio_device = {
 
 };
 #endif
+
+#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+#define CAD0 (0)
+#define CAD1 (0)
+#define AK8975_BASE_ADDR (0x03)
+#define AK8975_ADDR  ((AK8975_BASE_ADDR) << 2 |(CAD0) << 1|(CAD1))
+#define GPIO_AK8975C_INT 20
+static struct i2c_board_info i2c_devices_4[] = {
+	{
+		I2C_BOARD_INFO("akm8975c", AK8975_ADDR),
+		.platform_data = NULL,
+		.irq = MSM_GPIO_TO_INT(GPIO_AK8975C_INT)
+	},
+};
+
+#define AKM8975_SDA 76
+#define AKM8975_SCL 91
+#define AKM8975_INT 20
+static uint32_t akm8975_i2c_gpio_table[] = {
+		/* AK8973 GPIO-I2C interfaces */
+		GPIO_CFG(AKM8975_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), /* SDA */
+		GPIO_CFG(AKM8975_SCL,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), /* SCL */
+		GPIO_CFG(AKM8975_INT,  0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+};
+
+static struct i2c_gpio_platform_data akm8975_i2c_gpio_data = {
+	.sda_pin		= 76,
+	.scl_pin		= 91,
+	.sda_is_open_drain	= 0,
+	.scl_is_open_drain	= 0,
+	.udelay			= 2,
+};
+
+static struct platform_device akm8975_i2c_gpio_device = {
+	.name		= "i2c-gpio",
+	.id		= 4,
+	.dev		= {
+		.platform_data	= &akm8975_i2c_gpio_data,
+	},
+
+};
+#endif
 #endif
 
 static struct i2c_board_info i2c_devices_camera[]={
@@ -1565,6 +1607,9 @@ static struct platform_device *devices[] __initdata = {
 #if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
 #if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
 	&bma222_i2c_gpio_device,
+#endif
+#if defined (CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+	&akm8975_i2c_gpio_device,
 #endif
 #endif
 #ifdef CONFIG_MT9T013
@@ -2169,6 +2214,9 @@ static void __init msm7x2x_init(void)
 #if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
 	i2c_register_board_info(3, i2c_devices_3, ARRAY_SIZE(i2c_devices_3));
 #endif
+#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+	i2c_register_board_info(4, i2c_devices_4, ARRAY_SIZE(i2c_devices_4));
+#endif
 #endif
 
 #ifdef CONFIG_SURF_FFA_GPIO_KEYPAD
@@ -2196,6 +2244,9 @@ static void __init msm7x2x_init(void)
 #if defined(CONFIG_I2C_GPIO) || defined(CONFIG_I2C_GPIO_MODULE)
 #if defined(CONFIG_BMA222_I2C) || defined(CONFIG_BMA222_I2C_MODULE)
 	config_gpio_table(bma222_i2c_gpio_table,ARRAY_SIZE(bma222_i2c_gpio_table));
+#endif
+#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+	config_gpio_table(akm8975_i2c_gpio_table,ARRAY_SIZE(akm8975_i2c_gpio_table));
 #endif
 #endif
 }
