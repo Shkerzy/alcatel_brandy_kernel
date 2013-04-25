@@ -10,4 +10,10 @@ config SENSORS_AKM8975
 	help
 	  AKM8975 Compass Driver implemented by ALCATEL.
 
+config SENSORS_TAOS
+	tristate "TMD2771x DIGITAL ALS + PROXIMITY DETECTOR"
+	depends on I2C_GPIO
+	help
+	  TAOS TMD2771x digital ALS and proximity detector device driver
+
 endmenu
