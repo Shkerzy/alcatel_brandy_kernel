@@ -49,8 +49,8 @@
 #define HS_END_K		0x51	/* End key or Power key */
 #define HS_STEREO_HEADSET_K	0x82
 #define HS_HEADSET_SWITCH_K	0x84
-#define HS_HEADSET_SWITCH_2_K	0xF0
-#define HS_HEADSET_SWITCH_3_K	0xF1
+#define HS_HEADSET_SWITCH_2_K	0x8F //volume up
+#define HS_HEADSET_SWITCH_3_K	0x90 //volume down
 #define HS_HEADSET_HEADPHONE_K	0xF6
 #define HS_HEADSET_MICROPHONE_K 0xF7
 #define HS_REL_K		0xFF	/* key release */
