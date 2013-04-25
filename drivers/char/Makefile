@@ -90,3 +90,5 @@ js-rtc-y = rtc.o
 
 obj-$(CONFIG_MSM_ROTATOR)	+= msm_rotator.o
 obj-$(CONFIG_MMC_GENERIC_CSDIO)	+= csdio.o
+
+obj-y				+= flash_led.o
