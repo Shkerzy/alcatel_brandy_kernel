@@ -115,7 +115,6 @@ obj-$(CONFIG_FB_MSM_LCDC_SAMSUNG_WSVGA) += lcdc_samsung_wsvga.o
 obj-$(CONFIG_FB_MSM_LCDC_EXTERNAL_WXGA) += lcdc_external.o
 obj-$(CONFIG_FB_MSM_HDMI_SII_EXTERNAL_720P) += hdmi_sii9022.o
 obj-$(CONFIG_FB_MSM_LCDC_GORDON_VGA) += lcdc_gordon.o
-obj-$(CONFIG_FB_MSM_LCDC_HIMAX8347D) += lcdc_himax8347d.o
 obj-$(CONFIG_FB_MSM_LCDC_ILI9481) += lcdc_ili9481.o
 obj-$(CONFIG_FB_MSM_LCDC_R61529) += lcdc_r61529.o
 obj-$(CONFIG_FB_MSM_LCDC_INNOLUX_ILI9481) += lcdc_innolux_ili9481.o
