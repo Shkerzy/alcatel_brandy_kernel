@@ -1678,6 +1678,7 @@ static struct platform_device msm_batt_device = {
 
 static struct platform_device camera_i2c_gpio_device;
 static struct platform_device *devices[] __initdata = {
+	&msm_device_uart3,
 	&msm_device_smd,
 	&msm_device_dmov,
 	&msm_device_nand,
