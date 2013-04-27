@@ -747,7 +747,7 @@ struct msm_camsensor_info {
 	uint8_t support_3d;
 };
 /******************************************/
-#if 0
+
 /* Brightness type, used for CAMERA_PARM_BRIGHTNESS */
 enum camera_brightness_type {
 	CAMERA_BRIGHTNESS_MIN = 0,
@@ -795,7 +795,7 @@ enum camera_nightshot_mode_type {
 };
 
 /* Effect type, used for CAMERA_PARM_EFFECT */
-
+#if 0
 enum camera_effect_type {
 	CAMERA_EFFECT_MIN_MINUS_1,
 	CAMERA_EFFECT_OFF = 1,  /* This list must match aeecamera.h */
