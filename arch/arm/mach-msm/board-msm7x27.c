@@ -97,6 +97,10 @@
 #define TRULY_LCD		0x01
 #define FOXCONN_LCD		0x00
 
+#ifdef FEATUE_JRD_BATTERY_CAPACITY
+extern const u32 jrd_batt_level[];
+#endif
+
 static struct resource smc91x_resources[] = {
 	[0] = {
 		.start	= 0x9C004300,
@@ -1623,6 +1627,38 @@ static struct msm_psy_batt_pdata msm_psy_batt_data = {
 	.calculate_capacity	= &msm_calculate_batt_capacity,
 };
 
+#ifdef FEATUE_JRD_BATTERY_CAPACITY
+static u32 msm_calculate_batt_capacity(u32 current_voltage)
+{
+    u32 low_voltage   = 0;
+    u32 high_voltage  = 0;
+    u16 level_index = 0;
+    msm_psy_batt_data.voltage_min_design = 3000;
+    msm_psy_batt_data.voltage_max_design = 4200;
+    low_voltage   = msm_psy_batt_data.voltage_min_design;
+    high_voltage  = msm_psy_batt_data.voltage_max_design;
+
+    if (current_voltage > high_voltage)
+    {
+        level_index = 0;
+    }
+    else if (current_voltage < low_voltage)
+    {
+        level_index = 120;
+    }
+    else
+    {
+        level_index = (high_voltage - current_voltage)/10;
+    }
+
+    //printk(KERN_INFO "%s() : YZB ==========+++++++++++++current_voltage: %d;level_index:%d ;\n\n\n",
+    //						__func__,  current_voltage,level_index);
+
+    return jrd_batt_level[level_index];
+
+}
+
+#else
 static u32 msm_calculate_batt_capacity(u32 current_voltage)
 {
 	u32 low_voltage   = msm_psy_batt_data.voltage_min_design;
@@ -1631,6 +1667,7 @@ static u32 msm_calculate_batt_capacity(u32 current_voltage)
 	return (current_voltage - low_voltage) * 100
 		/ (high_voltage - low_voltage);
 }
+#endif
 
 static struct platform_device msm_batt_device = {
 	.name 		    = "msm-battery",
