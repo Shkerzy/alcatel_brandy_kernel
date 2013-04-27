@@ -55,7 +55,7 @@ struct ov7690_ctrl_t {
 static struct ov7690_ctrl_t *ov7690_ctrl;
 
 static DECLARE_WAIT_QUEUE_HEAD(ov7690_wait_queue);
-DECLARE_MUTEX(ov7690_sem);
+DEFINE_MUTEX(ov7690_sem);
 
 /*litao add for ov7690 proc file*/
 struct ov7690_proc_t {
@@ -993,7 +993,7 @@ int ov7690_sensor_config(void __user * argp)
 	if (copy_from_user(&cfg_data, (void *)argp, sizeof(struct sensor_cfg_data)))
 		return -EFAULT;
 
-	/* down(&ov7690_sem); */
+	mutex_lock(&ov7690_sem);
 
 	CDBG("ov7690_ioctl, cfgtype = %d, mode = %d\n", cfg_data.cfgtype, cfg_data.mode);
 
@@ -1027,7 +1027,7 @@ int ov7690_sensor_config(void __user * argp)
 		break;
 	}
 
-	/* up(&ov7690_sem); */
+	mutex_unlock(&ov7690_sem);
 
 	return rc;
 }
@@ -1037,7 +1037,7 @@ int ov7690_sensor_release(void)
 	int rc = 0;
 
 	CDBG("ov7690_sensor_release\n");
-	/* down(&ov7690_sem); */
+	mutex_lock(&ov7690_sem);
 
 	/*shut down ov7690:pwn = gpio23*/
 	/*
@@ -1047,7 +1047,7 @@ int ov7690_sensor_release(void)
 	*/
 
 	kfree(ov7690_ctrl);
-	/* up(&ov7690_sem); */
+	mutex_unlock(&ov7690_sem);
 
 	ov7690_del_proc();
 	return rc;
