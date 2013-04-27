@@ -1191,6 +1191,44 @@ static struct platform_device akm8975_i2c_gpio_device = {
 
 };
 #endif
+
+#if defined(CONFIG_SENSORS_TAOS)  || defined(CONFIG_SENSORS_TAOS_MODULE)
+#define TAOS_TMD2771x_ADDR (0x39)
+#define GPIO_TAOS_TMD2771x_INT 94
+#define TAOS_LTR558_ADDR (0x23)
+static struct i2c_board_info i2c_devices_5[] = {
+	{
+		I2C_BOARD_INFO("tritonFN", TAOS_TMD2771x_ADDR),
+		.platform_data = NULL,
+		.irq = MSM_GPIO_TO_INT(GPIO_TAOS_TMD2771x_INT),
+	},
+};
+
+#define TAOS_TMD2771x_SDA 108
+#define TAOS_TMD2771x_SCL 109
+#define TAOS_TMD2771x_INT   94
+static uint32_t taos_tmd2771x_i2c_gpio_table[] = {
+		GPIO_CFG(TAOS_TMD2771x_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), /* SDA */
+		GPIO_CFG(TAOS_TMD2771x_SCL,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA), /* SCL */
+		GPIO_CFG(TAOS_TMD2771x_INT,  0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+};
+
+static struct i2c_gpio_platform_data taos_i2c_gpio_data = {
+	.sda_pin		= 108,
+	.scl_pin		= 109,
+	.sda_is_open_drain	= 0,
+	.scl_is_open_drain	= 0,
+	.udelay			= 2,
+};
+
+static struct platform_device taos_i2c_gpio_device = {
+	.name		= "i2c-gpio",
+	.id		= 5,
+	.dev		= {
+		.platform_data	= &taos_i2c_gpio_data,
+	},
+};
+#endif
 #endif
 
 static struct i2c_board_info i2c_devices_camera[]={
@@ -1653,6 +1691,9 @@ static struct platform_device *devices[] __initdata = {
 #endif
 #if defined (CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
 	&akm8975_i2c_gpio_device,
+#endif
+#if defined(CONFIG_SENSORS_TAOS) || defined(CONFIG_SENSORS_TAOS_MODULE)
+	&taos_i2c_gpio_device,
 #endif
 #endif
 #ifdef CONFIG_MT9T013
@@ -2268,6 +2309,9 @@ static void __init msm7x2x_init(void)
 #if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
 	i2c_register_board_info(4, i2c_devices_4, ARRAY_SIZE(i2c_devices_4));
 #endif
+#if defined(CONFIG_SENSORS_TAOS) || defined(CONFIG_SENSORS_TAOS_MODULE)
+	i2c_register_board_info(5, i2c_devices_5, ARRAY_SIZE(i2c_devices_5));
+#endif
 #endif
 
 #ifdef CONFIG_SURF_FFA_GPIO_KEYPAD
@@ -2298,6 +2342,9 @@ static void __init msm7x2x_init(void)
 #endif
 #if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
 	config_gpio_table(akm8975_i2c_gpio_table,ARRAY_SIZE(akm8975_i2c_gpio_table));
+#endif
+#if defined(CONFIG_SENSORS_TAOS) || defined(CONFIG_SENSORS_TAOS_MODULE)
+	config_gpio_table(taos_tmd2771x_i2c_gpio_table, ARRAY_SIZE(taos_tmd2771x_i2c_gpio_table));
 #endif
 #endif
 }
