@@ -1348,8 +1348,8 @@ static uint32_t camera_off_gpio_table[] = {
 
 static uint32_t camera_on_gpio_table[] = {
 	/* parallel CAMERA interfaces */
-	GPIO_CFG(0,  1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* RESET */
-	GPIO_CFG(1,  1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* PDN */
+	GPIO_CFG(0,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* RESET */
+	GPIO_CFG(1,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* PDN */
 	GPIO_CFG(2,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT2 */
 	GPIO_CFG(3,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT3 */
 	GPIO_CFG(4,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), /* DAT4 */
@@ -1383,12 +1383,15 @@ static void config_gpio_table(uint32_t *table, int len)
 
 static struct vreg *vreg_gp2;
 static struct vreg *vreg_gp3;
+static struct vreg *vreg_gp5;
+static struct vreg *vreg_boost;
 
 static void msm_camera_vreg_config(int vreg_en)
 {
 	int rc;
 
-	if (vreg_gp2 == NULL) {
+	/*commented by litao for correct set the camera voltage*/
+	//if (vreg_gp2 == NULL) {
 		vreg_gp2 = vreg_get(NULL, "gp2");
 		if (IS_ERR(vreg_gp2)) {
 			printk(KERN_ERR "%s: vreg_get(%s) failed (%ld)\n",
@@ -1396,14 +1399,15 @@ static void msm_camera_vreg_config(int vreg_en)
 			return;
 		}
 
+		printk("gp2 1500\n");
 		rc = vreg_set_level(vreg_gp2, 1500);
 		if (rc) {
 			printk(KERN_ERR "%s: GP2 set_level failed (%d)\n",
 				__func__, rc);
 		}
-	}
+	//}
 
-	if (vreg_gp3 == NULL) {
+	//if (vreg_gp3 == NULL) {
 		vreg_gp3 = vreg_get(NULL, "gp3");
 		if (IS_ERR(vreg_gp3)) {
 			printk(KERN_ERR "%s: vreg_get(%s) failed (%ld)\n",
@@ -1411,35 +1415,79 @@ static void msm_camera_vreg_config(int vreg_en)
 			return;
 		}
 
+		printk("gp3 2800\n");
 		rc = vreg_set_level(vreg_gp3, 2800);
 		if (rc) {
 			printk(KERN_ERR "%s: GP3 set level failed (%d)\n",
 				__func__, rc);
 		}
+	//}
+
+	//if (vreg_gp5 == NULL) {
+		vreg_gp5 = vreg_get(NULL, "gp5");
+		if (IS_ERR(vreg_gp5)) {
+			printk(KERN_ERR "%s: vreg_get(%s) failed (%ld)\n",
+				__func__, "gp5", PTR_ERR(vreg_gp5));
+			return;
+		}
+
+		printk("gp5 2800\n");
+		rc = vreg_set_level(vreg_gp5, 2800);
+		if (rc) {
+			printk(KERN_ERR "%s: GP5 set level failed (%d)\n",
+				__func__, rc);
+		}
+	//}
+
+		//for vreg_5v setting
+		vreg_boost = vreg_get(NULL, "boost");
+		if (IS_ERR(vreg_boost)) {
+			printk(KERN_ERR "%s: vreg_get(%s) failed (%ld)\n",
+				__func__, "boost", PTR_ERR(vreg_boost));
+			return;
+		}
+
+		printk("vreg_5v 5000\n");
+		rc = vreg_set_level(vreg_boost, 5000);
+		if (rc) {
+			printk(KERN_ERR "%s: boost set level failed (%d)\n",
+				__func__, rc);
 	}
 
 	if (vreg_en) {
+		rc = vreg_enable(vreg_gp3);
+		if (rc) {
+			printk(KERN_ERR "%s: GP3 enable failed (%d)\n",
+				__func__, rc);
+		}
+
 		rc = vreg_enable(vreg_gp2);
 		if (rc) {
 			printk(KERN_ERR "%s: GP2 enable failed (%d)\n",
 				 __func__, rc);
 		}
 
-		rc = vreg_enable(vreg_gp3);
+		rc = vreg_enable(vreg_gp5);
 		if (rc) {
-			printk(KERN_ERR "%s: GP3 enable failed (%d)\n",
+			printk(KERN_ERR "%s: GP5 enable failed (%d)\n",
+				__func__, rc);
+		}
+
+		rc = vreg_enable(vreg_boost);
+		if (rc) {
+			printk(KERN_ERR "%s: boost enable failed (%d)\n",
 				__func__, rc);
 		}
 	} else {
-		rc = vreg_disable(vreg_gp2);
+		rc = vreg_disable(vreg_gp5);
 		if (rc) {
-			printk(KERN_ERR "%s: GP2 disable failed (%d)\n",
-				 __func__, rc);
+			printk(KERN_ERR "%s: GP5 disable failed (%d)\n",
+				__func__, rc);
 		}
 
-		rc = vreg_disable(vreg_gp3);
+		rc = vreg_disable(vreg_boost);
 		if (rc) {
-			printk(KERN_ERR "%s: GP3 disable failed (%d)\n",
+			printk(KERN_ERR "%s: boost disable failed (%d)\n",
 				__func__, rc);
 		}
 		gpio_request(0, "ov5647");

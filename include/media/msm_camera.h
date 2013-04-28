@@ -749,7 +749,7 @@ struct msm_camsensor_info {
 /******************************************/
 
 /* Brightness type, used for CAMERA_PARM_BRIGHTNESS */
-enum camera_brightness_type {
+typedef enum {
 	CAMERA_BRIGHTNESS_MIN = 0,
 	CAMERA_BRIGHTNESS_0 = 0,
 	CAMERA_BRIGHTNESS_1 = 1,
@@ -764,18 +764,18 @@ enum camera_brightness_type {
 	CAMERA_BRIGHTNESS_9 = 9,
 	CAMERA_BRIGHTNESS_10 = 10,
 	CAMERA_BRIGHTNESS_MAX = 10
-};
+} camera_brightness_type;
 
-enum camera_antibanding_type {
+typedef enum {
 	CAMERA_ANTIBANDING_OFF,
 	CAMERA_ANTIBANDING_60HZ,
 	CAMERA_ANTIBANDING_50HZ,
 	CAMERA_ANTIBANDING_AUTO,
 	CAMERA_MAX_ANTIBANDING,
-};
+} camera_antibanding_type;
 
 /* White balancing type, used for CAMERA_PARM_WHITE_BALANCING */
-enum camera_wb_type {
+typedef enum {
 	CAMERA_WB_MIN_MINUS_1,
 	CAMERA_WB_AUTO = 1,  /* This list must match aeecamera.h */
 	CAMERA_WB_CUSTOM,
@@ -786,17 +786,17 @@ enum camera_wb_type {
 	CAMERA_WB_TWILIGHT,
 	CAMERA_WB_SHADE,
 	CAMERA_WB_MAX_PLUS_1
-};
+} camera_wb_type;
 
-enum camera_nightshot_mode_type {
+typedef enum {
 	CAMERA_NIGHTSHOT_MODE_OFF,
 	CAMERA_NIGHTSHOT_MODE_ON,
 	CAMERA_MAX_NIGHTSHOT_MODE
-};
+} camera_nightshot_mode_type;
 
 /* Effect type, used for CAMERA_PARM_EFFECT */
 #if 0
-enum camera_effect_type {
+typedef enum {
 	CAMERA_EFFECT_MIN_MINUS_1,
 	CAMERA_EFFECT_OFF = 1,  /* This list must match aeecamera.h */
 	CAMERA_EFFECT_MONO,
@@ -811,7 +811,7 @@ enum camera_effect_type {
 	CAMERA_EFFECT_BLACKBOARD,
 	CAMERA_EFFECT_AQUA,
 	CAMERA_EFFECT_MAX_PLUS_1
-};
+} camera_effect_type;
 #endif
 
 #endif /* __LINUX_MSM_CAMERA_H */
