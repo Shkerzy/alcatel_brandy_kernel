@@ -1927,7 +1927,7 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 				     MPP_CFG(MPP_DLOGIC_LVL_MSMP,
 				     MPP_DLOGIC_OUT_CTRL_LOW));
 			} else
-				rc = vreg_disable(vreg_mmc);
+				//rc = vreg_disable(vreg_mmc);
 			if (rc)
 				printk(KERN_ERR "%s: return val: %d \n",
 					__func__, rc);
@@ -1936,7 +1936,7 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	}
 
 	if (!vreg_sts) {
-		if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa()) {
+		if (!machine_is_msm7x27_ffa()) {
 			rc = mpp_config_digital_out(mpp_mmc,
 			     MPP_CFG(MPP_DLOGIC_LVL_MSMP,
 			     MPP_DLOGIC_OUT_CTRL_HIGH));
@@ -2018,7 +2018,7 @@ static struct mmc_platform_data msm7x2x_sdc4_data = {
 
 static void __init msm7x2x_init_mmc(void)
 {
-	if (!machine_is_msm7x25_ffa() && !machine_is_msm7x27_ffa()) {
+	if (machine_is_msm7x27_ffa()) {
 		vreg_mmc = vreg_get(NULL, "mmc");
 		if (IS_ERR(vreg_mmc)) {
 			printk(KERN_ERR "%s: vreg get failed (%ld)\n",
