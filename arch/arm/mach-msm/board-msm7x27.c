@@ -903,6 +903,80 @@ static struct platform_device msm_fb_device = {
 	}
 };
 
+int regon_status = 0;
+#define REG_ON_GPIO 81
+static uint32_t bcm4329_gpio_regon[] = {
+		GPIO_CFG(81, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+};
+
+int bcm4329_power(int bt_wifi, int on)
+{
+	int rc = 0;
+	struct vreg *vreg_32k;
+
+	vreg_32k = vreg_get(NULL, "gp4");
+	if(IS_ERR(vreg_32k)) {
+		printk(KERN_ERR"%s: vreg get failed (%ld) \n",
+				__FUNCTION__, PTR_ERR(vreg_32k));
+		return PTR_ERR(vreg_32k);
+	}
+	rc = gpio_tlmm_config(bcm4329_gpio_regon[0], GPIO_CFG_ENABLE);
+	if (rc)
+	{
+		printk("err config regon %d\n", on);
+		return -EIO;
+	}
+
+	if (on)
+	{
+		if (regon_status)
+		{
+			regon_status |= 1 << bt_wifi;
+			return 0;
+		}
+		rc = vreg_set_level(vreg_32k, 1800);
+		if (rc) {
+			printk(KERN_ERR "%s: vreg set level failed (%d)\n",
+					__func__, rc);
+			return -EIO;
+		}
+		rc = vreg_enable(vreg_32k);
+		if (rc) {
+			printk(KERN_ERR "%s: vreg enable failed (%d)\n",
+					__func__, rc);
+			return -EIO;
+		}
+		gpio_request(REG_ON_GPIO, "btwifi_regon");
+		gpio_direction_output(REG_ON_GPIO, 1);
+
+		msleep(200);
+
+		gpio_set_value(REG_ON_GPIO, 1);
+		regon_status |= 1 << bt_wifi;
+	}
+	else
+	{
+		if(!regon_status)
+			return 0;
+		regon_status &= ~ (1 << bt_wifi);
+		if(regon_status)
+			return 0;
+        vreg_set_level(vreg_32k, 0);
+		gpio_set_value(REG_ON_GPIO, 0); // turn down REG_ON
+
+		gpio_free(REG_ON_GPIO);
+
+		rc = vreg_disable(vreg_32k);
+		if (rc) {
+				printk(KERN_ERR "%s: vreg disable failed (%d)\n",
+							__func__, rc);
+				return -EIO;
+		}
+		regon_status &= ~ (1 << bt_wifi);
+	}
+	return 0;
+}
+
 #ifdef CONFIG_BT
 static struct platform_device msm_bt_power_device = {
 	.name = "bt_power",
@@ -932,6 +1006,7 @@ static unsigned bt_config_power_on[] = {
 	GPIO_CFG(70, 2, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* PCM_SYNC */
 	GPIO_CFG(71, 2, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* PCM_CLK */
 	GPIO_CFG(83, 0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* HOST_WAKE */
+	GPIO_CFG(81, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* REG_ON*/
 };
 static unsigned bt_config_power_off[] = {
 	GPIO_CFG(42, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* WAKE */
@@ -944,24 +1019,18 @@ static unsigned bt_config_power_off[] = {
 	GPIO_CFG(70, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* PCM_SYNC */
 	GPIO_CFG(71, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* PCM_CLK */
 	GPIO_CFG(83, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* HOST_WAKE */
+	GPIO_CFG(81, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* REG_ON*/
 };
 
 static int bluetooth_power(int on)
 {
-	struct vreg *vreg_bt;
 	int pin, rc;
 
 	printk(KERN_DEBUG "%s\n", __func__);
-
-	/* do not have vreg bt defined, gp6 is the same */
-	/* vreg_get parameter 1 (struct device *) is ignored */
-	vreg_bt = vreg_get(NULL, "gp6");
-
-	if (IS_ERR(vreg_bt)) {
-		printk(KERN_ERR "%s: vreg get failed (%ld)\n",
-		       __func__, PTR_ERR(vreg_bt));
-		return PTR_ERR(vreg_bt);
-	}
+	if(on)
+		printk("Turn on BT, GP4 got\n");
+	else
+		printk("Turn off BT, GP4 got\n");
 
 	if (on) {
 		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_on); pin++) {
@@ -975,26 +1044,32 @@ static int bluetooth_power(int on)
 			}
 		}
 
-		/* units of mV, steps of 50 mV */
-		rc = vreg_set_level(vreg_bt, 2600);
-		if (rc) {
-			printk(KERN_ERR "%s: vreg set level failed (%d)\n",
-			       __func__, rc);
-			return -EIO;
-		}
-		rc = vreg_enable(vreg_bt);
-		if (rc) {
-			printk(KERN_ERR "%s: vreg enable failed (%d)\n",
-			       __func__, rc);
-			return -EIO;
-		}
-	} else {
-		rc = vreg_disable(vreg_bt);
-		if (rc) {
-			printk(KERN_ERR "%s: vreg disable failed (%d)\n",
-			       __func__, rc);
-			return -EIO;
-		}
+		gpio_set_value(42, 1); //liuyu added
+
+		//when reg_on up if wifi don't open, wifi reset pin need output low
+		mpp_config_digital_out(9,
+					     MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+					     MPP_DLOGIC_OUT_CTRL_LOW));
+		bcm4329_power(1, on);
+		//gpio_set_value(REG_ON_GPIO, 1); //turn on REG_ON liuyu added
+
+		msleep(100);
+		//Turn up the BT_RST_N
+		printk("Turn up the BT_RST_N\n");
+		mpp_config_digital_out(9,
+					     MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+					     MPP_DLOGIC_OUT_CTRL_HIGH));
+	}
+	else
+	{
+
+		printk("Turn down BT32_K, BT_RST_N, REG_ON\n");
+		mpp_config_digital_out(9,
+					     MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+					     MPP_DLOGIC_OUT_CTRL_LOW));
+
+		bcm4329_power(1, on);
+		//when reg_on off, reset pin output high to avoid current leak.
 		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_off); pin++) {
 			rc = gpio_tlmm_config(bt_config_power_off[pin],
 					      GPIO_CFG_ENABLE);
@@ -1803,6 +1878,144 @@ void msm_serial_debug_init(unsigned int base, int irq,
 	|| defined(CONFIG_MMC_MSM_SDC3_SUPPORT)\
 	|| defined(CONFIG_MMC_MSM_SDC4_SUPPORT))
 
+void (*wifi_status_cb)(int card_present, void *dev_id);
+void *wifi_status_cb_devid;
+EXPORT_SYMBOL(wifi_status_cb_devid);
+int wifi_status_notify(void (*callback)(int card_present, void *dev_id), void *dev_id)
+{
+	if (wifi_status_cb)
+		return -EAGAIN;
+	wifi_status_cb	= callback;
+	wifi_status_cb_devid	= dev_id;
+	return 0;
+}
+
+static uint32_t wifi_on_gpio_table[] = {
+	GPIO_CFG(62, 2, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),	/* "sdc2_clk"*/
+	GPIO_CFG(63, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA),	/* "sdc2_cmd"*/
+	GPIO_CFG(64, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA),	/* "sdc2_dat_3"*/
+	GPIO_CFG(65, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA),	/* "sdc2_dat_2"*/
+	GPIO_CFG(66, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA),	/* "sdc2_dat_1"*/
+	GPIO_CFG(67, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_8MA),	/* "sdc2_dat_0"*/
+	GPIO_CFG(21, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* "WLAN IRQ"*/
+};
+
+static uint32_t wifi_sleep_gpio_table[] = {
+	GPIO_CFG(62, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* "sdc2_clk"*/
+	GPIO_CFG(63, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* "sdc2_cmd"*/
+	GPIO_CFG(64, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* "sdc2_dat_3"*/
+	GPIO_CFG(65, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* "sdc2_dat_2"*/
+	GPIO_CFG(66, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* "sdc2_dat_1"*/
+	GPIO_CFG(67, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),	/* "sdc2_dat_0"*/
+	GPIO_CFG(21, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),	/* "WLAN IRQ"*/
+};
+
+int msm_wifi_power(int on)
+{
+	int rc = 0;
+	if (on)
+	{
+		config_gpio_table(wifi_on_gpio_table,
+				ARRAY_SIZE(wifi_on_gpio_table));
+		mdelay(50);
+	} else {
+		config_gpio_table(wifi_sleep_gpio_table,
+				ARRAY_SIZE(wifi_sleep_gpio_table));
+	}
+	if (on)
+	{
+		bcm4329_power(0, on);
+		msleep(150);
+		rc = mpp_config_digital_out(17,
+					MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+					MPP_DLOGIC_OUT_CTRL_HIGH));
+		if (rc)
+		{
+			printk(KERN_ERR"%s: mpp_config_digital_out return val: %d \n",
+					__FUNCTION__, rc);
+			return rc;
+		}
+	}
+	else
+	{
+		rc = mpp_config_digital_out(17,
+					MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+					MPP_DLOGIC_OUT_CTRL_LOW));
+		msleep(100);
+		if (rc)
+		{
+			printk(KERN_ERR"%s: mpp_config_digital_out return val: %d \n",
+					__FUNCTION__, rc);
+			return rc;
+		}
+		bcm4329_power(0, on);
+	}
+	return 0;
+}
+
+int msm_wifi_reset(int on)
+{
+	int rc=0;
+	if(on)
+	{
+	// reset high
+	rc = mpp_config_digital_out(17,
+			MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+			MPP_DLOGIC_OUT_CTRL_HIGH));
+	}
+	else
+	{
+	// reset low
+	rc = mpp_config_digital_out(17,
+			MPP_CFG(MPP_DLOGIC_LVL_MSMP,
+			MPP_DLOGIC_OUT_CTRL_LOW));
+	}
+	if(rc<0)
+	{
+		printk("%s: set Wifi_RST pin error\n",__FUNCTION__);
+	}
+	return rc;
+}
+
+int msm_wifi_set_carddetect(int on)
+{
+    printk(KERN_INFO"%s: %d\n", __func__, on);
+
+	if (wifi_status_cb) {
+        wifi_status_cb(on, wifi_status_cb_devid);
+    } else
+        printk(KERN_WARNING"%s: Nobody to notify\n", __func__);
+    return 0;
+}
+
+#define BRANDY_GPIO_WIFI_IRQ	21
+static struct resource msm_wifi_resources[] = {
+	[0] = {
+		.name		= "bcm4329_wlan_irq",
+		.start		= MSM_GPIO_TO_INT(BRANDY_GPIO_WIFI_IRQ),
+		.end		= MSM_GPIO_TO_INT(BRANDY_GPIO_WIFI_IRQ),
+		.flags      = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE,
+	},
+};
+
+#include <linux/wlan_plat.h>
+static struct wifi_platform_data msm_wifi_control = {
+	.set_power      = msm_wifi_power,
+	.set_reset      = msm_wifi_reset,
+	.set_carddetect = msm_wifi_set_carddetect,
+//	.mem_prealloc	= msm_wifi_mem_prealloc,
+};
+
+static struct platform_device msm_wifi_device = {
+        .name           = "bcm4329_wlan",
+        .id             = 1,
+        .num_resources  = ARRAY_SIZE(msm_wifi_resources),
+        .resource       = msm_wifi_resources,
+        .dev            = {
+                .platform_data = &msm_wifi_control,
+        },
+};
+
 static unsigned long vreg_sts, gpio_sts;
 static struct vreg *vreg_mmc;
 static unsigned mpp_mmc = 2;
@@ -1969,6 +2182,7 @@ static struct mmc_platform_data msm7x2x_sdc1_data = {
 #endif
 
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
+#if 0
 static struct mmc_platform_data msm7x2x_sdc2_data = {
 	.ocr_mask	= MMC_VDD_28_29,
 	.translate_vdd	= msm_sdcc_setup_power,
@@ -1983,6 +2197,16 @@ static struct mmc_platform_data msm7x2x_sdc2_data = {
 #ifdef CONFIG_MMC_MSM_SDC2_DUMMY52_REQUIRED
 	.dummy52_required = 1,
 #endif
+};
+#endif
+
+static struct mmc_platform_data msm7x2x_wifi_data = {
+	.ocr_mask	= MMC_VDD_28_29,
+	.register_status_notify	= wifi_status_notify,
+	.msmsdcc_fmin	= 144000,
+	.msmsdcc_fmid	= 24576000,
+	.msmsdcc_fmax	= 24576000,
+	.nonremovable	= 0,
 };
 #endif
 
@@ -2034,8 +2258,10 @@ static void __init msm7x2x_init_mmc(void)
 	if (machine_is_msm7x25_surf() || machine_is_msm7x27_surf() ||
 		machine_is_msm7x27_ffa()) {
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
+#if 0
 		msm_sdcc_setup_gpio(2, 1);
 		msm_add_sdcc(2, &msm7x2x_sdc2_data);
+#endif
 #endif
 	}
 
@@ -2052,6 +2278,22 @@ static void __init msm7x2x_init_mmc(void)
 #define msm7x2x_init_mmc() do {} while (0)
 #endif
 
+static void __init msm7x2x_init_wifi(void)
+{
+	int rc = 0;
+	msm_add_sdcc(2, &msm7x2x_wifi_data);
+
+	rc = gpio_tlmm_config(bcm4329_gpio_regon[0], GPIO_CFG_ENABLE);
+	if (rc)
+	{
+		printk("### %s \n", __FUNCTION__);
+		return;
+	}
+	gpio_request(REG_ON_GPIO, "btwifi_regon");
+	gpio_direction_output(REG_ON_GPIO, 1);
+
+	gpio_set_value(REG_ON_GPIO, 0);
+}
 
 static struct msm_pm_platform_data msm7x25_pm_data[MSM_PM_SLEEP_MODE_NR] = {
 	[MSM_PM_SLEEP_MODE_POWER_COLLAPSE].latency = 16000,
@@ -2185,6 +2427,7 @@ static void msm7x27_wlan_init(void)
 {
 	int rc = 0;
 	/* TBD: if (machine_is_msm7x27_ffa_with_wcn1312()) */
+	platform_device_register(&msm_wifi_device);
 	if (machine_is_msm7x27_ffa()) {
 		rc = mpp_config_digital_out(3, MPP_CFG(MPP_DLOGIC_LVL_MSMP,
 				MPP_DLOGIC_OUT_CTRL_LOW));
@@ -2364,6 +2607,7 @@ static void __init msm7x2x_init(void)
 	msm7x2x_init_host();
 #endif
 	msm7x2x_init_mmc();
+	msm7x2x_init_wifi();
 	bt_power_init();
 
 	if (cpu_is_msm7x27())

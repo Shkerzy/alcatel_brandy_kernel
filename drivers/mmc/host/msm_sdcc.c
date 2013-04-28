@@ -69,6 +69,8 @@ static int  msmsdcc_dbg_init(void);
 #endif
 
 static unsigned int msmsdcc_pwrsave = 1;
+struct msmsdcc_host *wifi_host = NULL;
+struct device * wifi_host_dev = NULL;
 
 static struct mmc_command dummy52cmd;
 static struct mmc_request dummy52mrq = {
@@ -1971,6 +1973,12 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	mmc_add_host(mmc);
 
+        if (!strcmp(mmc_hostname(mmc), "mmc1")) {
+                wifi_host = host;
+                wifi_host_dev = &pdev->dev;
+                printk("### wifi_host %d\n", (int)wifi_host);
+        }
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	host->early_suspend.suspend = msmsdcc_early_suspend;
 	host->early_suspend.resume  = msmsdcc_late_resume;
@@ -2328,6 +2336,22 @@ msmsdcc_runtime_resume(struct device *dev)
 	}
 	return 0;
 }
+
+/*
+ *      added by jrd
+ */
+
+int wifi_call_resume(void)
+{
+        if (wifi_host && !wifi_host->clks_on) {
+                printk("## CALL WIFI RESUME ##\n");
+                msmsdcc_runtime_resume(wifi_host_dev);
+                //msmsdcc_pm_resume(wifi_host_dev);
+                return 1;
+        }
+        return 0;
+}
+EXPORT_SYMBOL(wifi_call_resume);
 
 static int msmsdcc_runtime_idle(struct device *dev)
 {
