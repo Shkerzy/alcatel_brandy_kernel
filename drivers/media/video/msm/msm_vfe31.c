@@ -1036,7 +1036,6 @@ static int vfe31_operation_config(uint32_t *cmd)
 	msm_io_w(*(++p), vfe31_ctrl->vfebase + VFE_REALIGN_BUF);
 	msm_io_w(*(++p), vfe31_ctrl->vfebase + VFE_CHROMA_UP);
 	msm_io_w(*(++p), vfe31_ctrl->vfebase + VFE_STATS_CFG);
-	wmb();
 	return 0;
 }
 static uint32_t vfe_stats_awb_buf_init(struct vfe_cmd_stats_buf *in)
@@ -1395,7 +1394,7 @@ static void vfe31_sync_timer_stop(void)
 		value = 0x40000;
 
 	/* Timer Stop */
-	msm_io_w_mb(value, vfe31_ctrl->vfebase + V31_SYNC_TIMER_OFF);
+	msm_io_w(value, vfe31_ctrl->vfebase + V31_SYNC_TIMER_OFF);
 }
 
 static void vfe31_sync_timer_start(const uint32_t *tbl)
@@ -1443,7 +1442,6 @@ static void vfe31_sync_timer_start(const uint32_t *tbl)
 	/* Selects sync timer 0 output to drive onto timer1 port */
 	value = 0;
 	msm_io_w(value, vfe31_ctrl->vfebase + V31_TIMER_SELECT_OFF);
-	wmb();
 }
 
 static void vfe31_program_dmi_cfg(enum VFE31_DMI_RAM_SEL bankSel)
@@ -2582,7 +2580,7 @@ static void vfe31_process_reset_irq(void)
 		vfe31_set_default_reg_values();
 
 		/* reload all write masters. (frame & line)*/
-		msm_io_w_mb(0x7FFF, vfe31_ctrl->vfebase + VFE_BUS_CMD);
+		msm_io_w(0x7FFF, vfe31_ctrl->vfebase + VFE_BUS_CMD);
 		vfe31_send_msg_no_payload(MSG_ID_RESET_ACK);
 	}
 }
