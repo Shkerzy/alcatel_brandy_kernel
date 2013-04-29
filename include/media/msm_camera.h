@@ -312,8 +312,6 @@ struct msm_camera_cfg_cmd {
 #define CMD_VPE 41
 #define CMD_AXI_CFG_VPE 42
 
-#define CMD_AXI_CFG_ZSL 43
-
 /* vfe config command: config command(from config thread)*/
 struct msm_vfe_cfg_cmd {
 	int cmd_type;
@@ -394,8 +392,7 @@ struct outputCfg {
 #define CAMIF_TO_AXI_VIA_OUTPUT_2 4
 #define OUTPUT_1_AND_CAMIF_TO_AXI_VIA_OUTPUT_2 5
 #define OUTPUT_2_AND_CAMIF_TO_AXI_VIA_OUTPUT_1 6
-#define OUTPUT_1_2_AND_3 7
-#define LAST_AXI_OUTPUT_MODE_ENUM = OUTPUT_1_2_AND_3 7
+#define LAST_AXI_OUTPUT_MODE_ENUM = OUTPUT_2_AND_CAMIF_TO_AXI_VIA_OUTPUT_1 7
 
 #define MSM_FRAME_PREV_1	0
 #define MSM_FRAME_PREV_2	1
@@ -424,7 +421,6 @@ struct msm_frame {
 	int croplen;
 	uint32_t error_code;
 	struct fd_roi_info roi_info;
-	uint32_t frame_id;
 };
 
 #define MSM_CAMERA_ERR_MASK (0xFFFFFFFF & 1)
@@ -433,7 +429,6 @@ struct msm_stats_buf {
 	int type;
 	unsigned long buffer;
 	int fd;
-	uint32_t frame_id;
 };
 
 #define MSM_V4L2_VID_CAP_TYPE	0
