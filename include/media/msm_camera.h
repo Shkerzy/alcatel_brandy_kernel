@@ -729,7 +729,6 @@ struct msm_camsensor_info {
 	char name[MAX_SENSOR_NAME];
 	uint8_t flash_enabled;
 	int8_t total_steps;
-	uint8_t support_3d;
 };
 /******************************************/
 
