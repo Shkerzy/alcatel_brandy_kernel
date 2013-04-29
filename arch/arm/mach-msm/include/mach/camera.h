@@ -450,9 +450,6 @@ enum msm_bus_perf_setting {
 	S_PREVIEW,
 	S_VIDEO,
 	S_CAPTURE,
-	S_ZSL,
-	S_STEREO_VIDEO,
-	S_STEREO_CAPTURE,
 	S_DEFAULT,
 	S_EXIT
 };
