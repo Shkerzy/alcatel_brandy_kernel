@@ -1,7 +1,7 @@
 obj-y += io.o dma.o memory.o
 obj-y += clock.o clock-voter.o clock-dummy.o
 obj-y += modem_notifier.o
-obj-y += msm_sensors_input_dev.o
+obj-y += msm_sensors_input_dev.o msm_vibrator.o
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
 obj-$(CONFIG_KEXEC) += msm_kexec.o
