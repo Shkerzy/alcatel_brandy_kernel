@@ -29,6 +29,7 @@
 #include <linux/earlysuspend.h>
 #include "taos_common.h"
 #include <linux/delay.h>
+#include <linux/wakelock.h>
 #include <mach/msm_sensors_input_dev.h>
 
 // device name/id/address/counts
@@ -113,6 +114,7 @@ static unsigned int prox_timer_count;
 #endif
 
 extern struct mutex __msm_sensors_lock;
+static struct wake_lock prox_wake_lock;
 
 // forward declarations
 static int taos_probe(struct i2c_client *clientp, const struct i2c_device_id *idp);
@@ -413,7 +415,7 @@ static int taos_probe(struct i2c_client *clientp, const struct i2c_device_id *id
 	taos_datap->taos_early_suspend.resume = taos_als_late_resume;
 	register_early_suspend(&taos_datap->taos_early_suspend);
 #endif
-
+	wake_lock_init(&prox_wake_lock, WAKE_LOCK_SUSPEND, "sensors_input");
 	printk("XXXXXXXXXXXXXXXX taos_probe OK XXXXXXXXXXXXXX\n");
 
 	return (ret);
@@ -1830,6 +1832,7 @@ static void taos_prox_work_f(struct work_struct *work)
 		mutex_lock(&__msm_sensors_lock);
 		msm_sensors_input_report_value(EV_MSC, MSC_GESTURE, prox_cur_infop->prox_event);
 		msm_sensors_input_sync();
+		wake_lock_timeout(&prox_wake_lock, 2 * HZ);
 		mutex_unlock(&__msm_sensors_lock);
 
 		//printk("XXXXXXXXXXXXX prox->event == %d XXXXXXXXX\n", prox_cur_infop->prox_event);  //for test
